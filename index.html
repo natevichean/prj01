@@ -413,6 +413,29 @@
   .cat.a-zoom .ear-r { transform: rotate(-12deg); }
   .cat.a-zoom .flip { transform: scaleX(var(--face, 1)) skewX(calc(var(--face, 1) * -8deg)); }
 
+  /* ----- dragging ----- */
+  .cat { cursor: grab; touch-action: none; }
+  .cat.dragged { cursor: grabbing; z-index: 4; }
+  .cat.dragged .jumper { transform: rotate(var(--tilt, 0deg)); transform-origin: 50% 25%; transition: transform .08s linear; }
+  .cat.dragged .shadow { opacity: 0; }
+  .cat.dragged .foot-l { animation: dangle .32s ease-in-out infinite alternate; }
+  .cat.dragged .foot-r { animation: dangle .32s ease-in-out infinite alternate-reverse; }
+  .cat.dragged .arm-l { animation: flailL .26s ease-in-out infinite alternate; }
+  .cat.dragged .arm-r { animation: flailR .26s ease-in-out infinite alternate; }
+  .cat.dragged .tail { animation: tailWag .4s ease-in-out infinite; }
+  .cat.dragged .rig { transform: scale(.94, 1.08); }
+  .cat.dragged .ear-l { transform: rotate(-12deg); }
+  .cat.dragged .ear-r { transform: rotate(12deg); }
+  @keyframes dangle { from { transform: translateY(4px) rotate(-10deg); } to { transform: translateY(10px) rotate(10deg); } }
+  @keyframes flailL { from { transform: rotate(110deg); } to { transform: rotate(150deg); } }
+  @keyframes flailR { from { transform: rotate(-110deg); } to { transform: rotate(-150deg); } }
+  .cat.falling .arm-l { transform: rotate(150deg); }
+  .cat.falling .arm-r { transform: rotate(-150deg); }
+  .cat.falling .shadow { opacity: 0; }
+  .cat.falling .rig { transform: scale(.94, 1.08); }
+  .cat.land .jumper { animation: land .55s cubic-bezier(.3, 1.5, .5, 1); }
+  @keyframes land { 0% { transform: scale(1.25, .7); } 50% { transform: scale(.92, 1.08) translateY(-4%); } 100% { transform: none; } }
+
   /* ----- effects ----- */
   .fx {
     position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3;
@@ -456,7 +479,7 @@
 
   <div id="hud">
     <div id="mood" class="chip">😸 ร่าเริง</div>
-    <div id="hint" class="chip">แตะที่แมวเพื่อเล่นด้วย · แตะพื้นเพื่อเรียกมาหา</div>
+    <div id="hint" class="chip">แตะแมวเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
   </div>
 
   <div id="cat" class="cat" role="button" tabindex="0" aria-label="แมวลายวัวสีฟ้า แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
@@ -652,7 +675,7 @@
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
   // ---------- presentation helpers ----------
-  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy'];
+  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land'];
   const MINI_CLASSES = ['look', 'groom', 'twitch', 'tailflick', 'sigh', 'yawn', 'stir'];
   const ACTION_CLASSES = ['a-wave', 'a-jump', 'a-excited', 'a-spin', 'a-love', 'a-dance', 'a-flip', 'a-peek', 'a-boo', 'a-giggle', 'a-pounce', 'a-zoom'];
 
@@ -689,7 +712,7 @@
   }
 
   // ---------- particles ----------
-  function scale() { return 0.78 + 0.34 * (cat.y - floorTop) / Math.max(1, floorBottom - floorTop); }
+  function scale() { return 0.78 + 0.34 * Math.max(0, cat.y - floorTop) / Math.max(1, floorBottom - floorTop); }
   function headPos() { const s = scale(); return { x: cat.x, y: cat.y - size * s * 0.62, s }; }
 
   function fx(text, opts = {}) {
@@ -962,7 +985,88 @@
     doAction(name);
   }
 
-  catEl.addEventListener('click', e => { e.stopPropagation(); pokeCat(); });
+  // ---------- dragging ----------
+  const drag = { id: null, sx: 0, sy: 0, ox: 0, oy: 0, active: false, lastX: 0, lastT: 0, tilt: 0, vx: 0, startY: 0 };
+  let suppressClick = false;
+
+  catEl.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (cat.mode === 'falling') return;
+    drag.id = e.pointerId; drag.active = false;
+    drag.sx = e.clientX; drag.sy = e.clientY;
+    drag.ox = cat.x - e.clientX; drag.oy = cat.y - e.clientY;
+    drag.lastX = e.clientX; drag.lastT = performance.now(); drag.vx = 0;
+    catEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  catEl.addEventListener('pointermove', e => {
+    if (e.pointerId !== drag.id) return;
+    if (!drag.active && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) startDrag();
+    if (!drag.active) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - drag.lastT);
+    drag.vx = drag.vx * 0.6 + ((e.clientX - drag.lastX) / dt) * 0.4;
+    drag.lastX = e.clientX; drag.lastT = now;
+    const half = size * 0.4;
+    cat.x = Math.min(Math.max(e.clientX + drag.ox, half), W - half);
+    cat.y = Math.min(Math.max(e.clientY + drag.oy, size * 0.85), floorBottom);
+    if (Math.abs(drag.vx) > 0.05) cat.face = drag.vx > 0 ? 1 : -1;
+  });
+  const endPointer = e => {
+    if (e.pointerId !== drag.id) return;
+    drag.id = null;
+    if (drag.active) { drag.active = false; suppressClick = true; setTimeout(() => (suppressClick = false), 0); drop(); }
+  };
+  catEl.addEventListener('pointerup', endPointer);
+  catEl.addEventListener('pointercancel', endPointer);
+
+  function startDrag() {
+    const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
+    clearTimers(); stopWalking(); hush();
+    drag.active = true;
+    drag.startY = cat.y;
+    cat.mode = 'drag';
+    cat.lastPoke = performance.now();
+    setClasses(['dragged']);
+    if (wasAsleep) { face('wide', 'o'); mood('😳 ตื่นแล้ว!?'); say(pick(['เอ๊ะ!? ลอยได้!?', 'ฮะ! ใครอุ้มเค้า!']), 1600); }
+    else {
+      const r = Math.random();
+      if (r < 0.5) { face('star', 'grin'); say(pick(['ว้าย~ ลอยได้!', 'บินได้แล้ว~!', 'วี้~!']), 1500); }
+      else { face('wide', 'o'); say(pick(['เอ๋!? ปล่อยน้า~', 'ว้ายยย!', 'หวาาา~']), 1500); }
+      mood('🙀 ลอยอยู่!');
+    }
+  }
+
+  function drop() {
+    cat.lastPoke = performance.now();
+    catEl.style.setProperty('--tilt', '0deg');
+    drag.tilt = 0;
+    const landY = Math.max(cat.y, floorTop + 20 + Math.random() * (floorBottom - floorTop - 20) * 0.5);
+    cat.fall = { vy: 0, landY, fromY: cat.y };
+    cat.mode = 'falling';
+    setClasses(['falling']);
+    face('wide', 'o');
+  }
+
+  function land() {
+    const height = cat.fall.landY - cat.fall.fromY;
+    cat.y = cat.fall.landY;
+    cat.fall = null;
+    cat.mode = 'action';
+    setClasses(['land']);
+    dust(5);
+    if (height > H * 0.35) {
+      face('dizzy', 'o'); say(pick(['โอ๊ย~ มึนเลย @_@', 'ตุ้บ! หัวหมุน~']), 1500);
+      later(() => setClasses(['dizzy']), 550);
+      later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 2000);
+    } else {
+      face('happy', 'grin'); say(pick(['ลงจอดสวย~ ✨', 'ตุ้บ! เล่นอีก!', 'สนุกจัง! อีกๆ']), 1500);
+      burst(STARS, 6, GOLDS);
+      later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 1300);
+    }
+  }
+
+  catEl.addEventListener('click', e => { e.stopPropagation(); if (suppressClick || cat.mode === 'drag' || cat.mode === 'falling') return; pokeCat(); });
   catEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pokeCat(); } });
 
   stage.addEventListener('click', e => {
@@ -972,7 +1076,7 @@
       setTimeout(() => catEl.classList.remove('stir'), 900);
       return;
     }
-    if (cat.mode === 'groggy' || cat.mode === 'action') return;
+    if (cat.mode === 'groggy' || cat.mode === 'action' || cat.mode === 'drag' || cat.mode === 'falling') return;
     if (cat.mode === 'sleepy') { cat.lastPoke = now; wakeUpGroggy(); return; }
     cat.lastPoke = now;
     if (cat.mode === 'bored') setMode('awake');
@@ -998,6 +1102,17 @@
     else if (cat.mode === 'bored' && idleFor > T_SLEEPY) setMode('sleepy');
     else if (cat.mode === 'sleepy' && idleFor > T_SLEEP) setMode('sleep');
 
+    if (cat.mode === 'drag') {
+      const want = Math.max(-28, Math.min(28, -drag.vx * 22)) * cat.face;
+      drag.tilt += (want - drag.tilt) * Math.min(1, dt * 10);
+      drag.vx *= Math.pow(0.02, dt);
+      catEl.style.setProperty('--tilt', drag.tilt.toFixed(1) + 'deg');
+    } else if (cat.mode === 'falling' && cat.fall) {
+      cat.fall.vy += 2600 * dt;
+      cat.y += cat.fall.vy * dt;
+      if (cat.y >= cat.fall.landY) land();
+    }
+
     if (cat.target) {
       const dx = cat.target.x - cat.x, dy = cat.target.y - cat.y;
       const dist = Math.hypot(dx, dy);
@@ -1017,7 +1132,7 @@
       }
     }
 
-    if (cat.mode !== 'action' && cat.mode !== 'groggy') idleTick(now);
+    if (cat.mode === 'awake' || cat.mode === 'bored' || cat.mode === 'sleepy' || cat.mode === 'sleep') idleTick(now);
 
     const s = scale();
     catEl.style.transform = `translate(${cat.x - size / 2}px, ${cat.y - size}px) scale(${s})`;
