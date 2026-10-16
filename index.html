@@ -114,6 +114,50 @@
   #mood.pop { transform: scale(1.12); }
   #hint { color: var(--ink-soft); font-size: 13px; }
 
+  .hud-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #belly { display: flex; align-items: center; gap: 8px; padding: 7px 12px; }
+  .meter { width: 72px; height: 10px; border-radius: 99px; background: rgba(127, 140, 160, .25); overflow: hidden; }
+  #bellyFill { height: 100%; width: 60%; border-radius: 99px; background: linear-gradient(90deg, #ff9a4d, #ffcf4d); transition: width .4s, background .4s; }
+  #belly.hungry #bellyFill { background: linear-gradient(90deg, #ff5c6c, #ff9a4d); }
+  #belly.hungry { animation: hungryPulse 1.2s ease-in-out infinite; }
+  @keyframes hungryPulse { 50% { transform: scale(1.06); } }
+  #foods {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    background: var(--chip-bg); border: 1px solid var(--chip-border); border-radius: 999px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 5; cursor: default; white-space: nowrap;
+  }
+  .foods-label { font-size: 13px; color: var(--ink-soft); padding: 0 4px 0 6px; }
+  .food-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: rgba(255, 255, 255, .5); font-size: 22px; line-height: 1; cursor: pointer;
+    transition: transform .15s;
+  }
+  .food-btn:hover { transform: translateY(-2px) scale(1.08); }
+  .food-btn:active { transform: scale(.9); }
+  .bowl {
+    position: absolute; left: 0; top: 0; width: 76px; height: 56px; pointer-events: none; z-index: 3;
+    transform-origin: 50% 100%;
+    animation: bowlDrop .5s cubic-bezier(.3, 1.4, .5, 1);
+  }
+  .bowl .food { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); font-size: 34px; transition: transform .25s, opacity .25s; }
+  .bowl svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 34px; overflow: visible; }
+  .bowl.gone { animation: bowlGone .5s ease-in forwards; }
+  @keyframes bowlDrop { from { transform: var(--pos) translateY(-120px) scale(.6); opacity: 0; } to { transform: var(--pos); opacity: 1; } }
+  @keyframes bowlGone { to { transform: var(--pos) scale(.4); opacity: 0; } }
+  .cat.eat .head { animation: munch .34s ease-in-out infinite alternate; }
+  .cat.eat .tail { animation-duration: .45s; }
+  .cat.eat .jumper { transform: translateY(2%) scale(1.03, .97); }
+  @keyframes munch { from { transform: rotate(6deg) translateY(8px); } to { transform: rotate(2deg) translateY(16px); } }
+  .cat.full .rig { animation: fullBelly 1s ease-in-out infinite alternate; }
+  .cat.full .arm-l { transform: rotate(-38deg); }
+  .cat.full .arm-r { transform: rotate(38deg); }
+  .cat.full .head { transform: rotate(-6deg); }
+  @keyframes fullBelly { from { transform: scale(1); } to { transform: scale(1.05, 1.02); } }
+  .cat.nope .head { animation: nope .3s ease-in-out 4; }
+  @keyframes nope { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+
   #picker {
     position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
     max-width: calc(100% - 32px);
@@ -490,6 +534,9 @@
     #hint { font-size: 12px; }
     .bubble { font-size: 15px; }
     #hint { display: none; }
+    .foods-label { display: none; }
+    .food-btn { width: 36px; height: 36px; font-size: 20px; }
+    .meter { width: 56px; }
     .pet-btn { width: 56px; font-size: 11px; }
     .pet-btn .thumb { width: 38px; height: 38px; }
   }
@@ -506,10 +553,14 @@
   <div id="floor"></div>
 
   <div id="hud">
-    <div id="mood" class="chip">😸 ร่าเริง</div>
+    <div class="hud-left">
+      <div id="mood" class="chip">😸 ร่าเริง</div>
+      <div id="belly" class="chip" title="ความอิ่ม"><span>🍽️</span><div class="meter"><div id="bellyFill"></div></div></div>
+    </div>
     <div id="hint" class="chip">แตะน้องเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
   </div>
 
+  <div id="foods" role="toolbar" aria-label="ให้อาหาร"><span class="foods-label">ให้อาหาร</span></div>
   <div id="picker" role="toolbar" aria-label="เลือกสัตว์เลี้ยง"></div>
 
   <div id="cat" class="cat" role="button" tabindex="0" aria-label="สัตว์เลี้ยง แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
@@ -550,7 +601,7 @@ const PetArt = (() => {
 
   const PETS = [
     {
-      key: 'cat', name: 'แมว', label: 'แมวลายวัวสีฟ้า', sound: 'เหมียว', dream: 'ปลาทู', scale: 1, nose: 'cat', whiskers: true,
+      key: 'cat', name: 'แมว', label: 'แมวลายวัวสีฟ้า', sound: 'เหมียว', dream: 'ปลาทู', fav: ['fish', 'milk'], scale: 1, nose: 'cat', whiskers: true,
       colors: { body: '#8fd0f7', patch: '#2f70b9', belly: '#eaf7ff', line: '#1d3d61', pink: '#ff9cbc' },
       head: HEAD, body: BODY,
       earL: fill('M50 64 L56 18 L92 42 Z', P) + fill('M59 52 L62 31 L80 44 Z', K, false),
@@ -576,19 +627,6 @@ const PetArt = (() => {
       tail: tailStroke('M134 162 C 172 160, 180 118, 158 106 C 144 98, 134 112, 146 122', 18, B) +
         `<path d="M160 108 C 150 104, 140 110, 146 122" fill="none" stroke="${P}" stroke-width="10"/>`,
       armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
-    },
-    {
-      key: 'ridgeback', name: 'หลังอาน', label: 'หมาไทยหลังอาน', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1.05,
-      colors: { body: '#cc7a3a', patch: '#8a4520', belly: '#eaa86c', line: '#45230d', pink: '#f4a0a0' },
-      head: E(100, 86, 57, 46), body: E(100, 156, 40, 35),
-      earL: fill('M46 68 L48 10 L92 42 Z', B) + fill('M55 58 L56 26 L80 44 Z', K, false),
-      earR: fill(mirror('M46 68 L48 10 L92 42 Z'), B) + fill(mirror('M55 58 L56 26 L80 44 Z'), K, false),
-      headMarks: fill(E(100, 110, 27, 19), P, false) + fill(E(100, 46, 14, 10), P, false),
-      face: `<path d="M86 58 Q100 53 114 58 M89 65 Q100 61 111 65" fill="none" stroke="${P}" stroke-width="2.6"/>`,
-      bodyMarks: fill(E(100, 168, 20, 18), W, false) +
-        fill('M95 121 L105 121 L108 132 L104 146 L100 156 L96 146 L92 132 Z', P, false),
-      tail: tailStroke('M136 170 C 160 168, 174 150, 178 124', 7, B),
-      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
     },
     {
       key: 'husky', name: 'ไซบีเรียน', label: 'ไซบีเรียน ฮัสกี้', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1.08, iris: '#58b4ff',
@@ -742,6 +780,9 @@ const PetArt = (() => {
   const moodEl = document.getElementById('mood');
   const flipEl = catEl.querySelector('.flip');
   const pickerEl = document.getElementById('picker');
+  const foodsEl = document.getElementById('foods');
+  const bellyEl = document.getElementById('belly');
+  const bellyFill = document.getElementById('bellyFill');
   let pupils = null;
   let pet = PetArt.PETS[0];
 
@@ -756,7 +797,8 @@ const PetArt = (() => {
     W = stage.clientWidth; H = stage.clientHeight;
     size = Math.round(Math.max(130, Math.min(230, W * 0.36, H * 0.32)) * pet.scale);
     floorTop = Math.round(H * 0.58);
-    floorBottom = H - Math.max(18, H * 0.04) - pickerEl.offsetHeight;
+    foodsEl.style.bottom = (pickerEl.offsetHeight + 20) + 'px';
+    floorBottom = H - Math.max(18, H * 0.04) - pickerEl.offsetHeight - foodsEl.offsetHeight - 8;
     floor.style.setProperty('--floor-top-px', floorTop + 'px');
     floor.style.top = floorTop + 'px';
     catEl.style.setProperty('--size', size + 'px');
@@ -778,7 +820,7 @@ const PetArt = (() => {
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
   // ---------- presentation helpers ----------
-  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof'];
+  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof', 'eat', 'full', 'nope'];
   const MINI_CLASSES = ['look', 'groom', 'twitch', 'tailflick', 'sigh', 'yawn', 'stir'];
   const ACTION_CLASSES = ['a-wave', 'a-jump', 'a-excited', 'a-spin', 'a-love', 'a-dance', 'a-flip', 'a-peek', 'a-boo', 'a-giggle', 'a-pounce', 'a-zoom'];
 
@@ -886,7 +928,7 @@ const PetArt = (() => {
     stopWalking();
     setClasses(m === 'awake' || m === 'action' ? [] : [m]);
     const now = performance.now();
-    if (m === 'awake') { face('open', 'smile'); mood('😸 ร่าเริง'); cat.nextIdle = now + rand(800, 2000); }
+    if (m === 'awake') { face('open', 'smile'); mood(hungry() ? '🥺 หิวจัง' : '😸 ร่าเริง'); cat.nextIdle = now + rand(800, 2000); }
     if (m === 'bored') { face('flat', 'flat'); mood('😑 เบื่อจัง…'); say(pick(['เฮ้อ… ไม่มีใครเล่นด้วยเลย', 'เบื่อจัง~', 'เฮ้อออ…']), 2200); cat.nextIdle = now + rand(2500, 4000); }
     if (m === 'sleepy') { face('half', 'w'); mood('🥱 ง่วงนอน…'); yawn(); cat.nextIdle = now + rand(3500, 5000); }
     if (m === 'sleep') { face('closed', 'w'); mood('😴 หลับปุ๋ย'); hush(); cat.nextIdle = now + 900; }
@@ -898,6 +940,11 @@ const PetArt = (() => {
     if (cat.mode === 'awake') {
       cat.nextIdle = now + rand(1800, 4200);
       if (cat.target) return;
+      if (hungry() && Math.random() < 0.35) {
+        mini('nope', 1200, 'half', 'o');
+        say(pick(['หิวจัง… 🥺', 'ท้องร้องจ๊อกๆ…', 'ขอข้าวหน่อยน้า~', 'มีอะไรกินบ้าง?']), 1800);
+        return;
+      }
       const r = Math.random();
       if (r < 0.55) { const p = randomSpot(); walkTo(p.x, p.y, rand(70, 110)); }
       else if (r < 0.68) mini('look', 1800, 'open', 'smile');
@@ -1074,6 +1121,7 @@ const PetArt = (() => {
   function pokeCat() {
     const now = performance.now();
     if (cat.mode === 'groggy') { say(pick(['อีกแป๊บน้า…', 'งือ…']), 1000); return; }
+    if (cat.mode === 'eating') { say(pick(['กำลังกินอยู่น้า~', 'งั่มๆ อย่าเพิ่งกวน~']), 1000); return; }
     const wasSleepy = cat.mode === 'sleep' || cat.mode === 'sleepy';
     cat.lastPoke = now;
     if (wasSleepy) { clicks = []; wakeUpGroggy(); return; }
@@ -1094,7 +1142,7 @@ const PetArt = (() => {
 
   catEl.addEventListener('pointerdown', e => {
     if (e.button !== undefined && e.button !== 0) return;
-    if (cat.mode === 'falling') return;
+    if (cat.mode === 'falling' || cat.mode === 'eating') return;
     drag.id = e.pointerId; drag.active = false;
     drag.sx = e.clientX; drag.sy = e.clientY;
     drag.ox = cat.x - e.clientX; drag.oy = cat.y - e.clientY;
@@ -1179,7 +1227,7 @@ const PetArt = (() => {
       setTimeout(() => catEl.classList.remove('stir'), 900);
       return;
     }
-    if (cat.mode === 'groggy' || cat.mode === 'action' || cat.mode === 'drag' || cat.mode === 'falling') return;
+    if (cat.mode === 'groggy' || cat.mode === 'action' || cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating') return;
     if (cat.mode === 'sleepy') { cat.lastPoke = now; wakeUpGroggy(); return; }
     cat.lastPoke = now;
     if (cat.mode === 'bored') setMode('awake');
@@ -1256,6 +1304,121 @@ const PetArt = (() => {
     requestAnimationFrame(frame);
   }
 
+  // ---------- feeding ----------
+  const FOODS = [
+    { key: 'fish', icon: '🐟', name: 'ปลา', value: 35 },
+    { key: 'meat', icon: '🍖', name: 'เนื้อ', value: 40 },
+    { key: 'bone', icon: '🦴', name: 'ขนม', value: 20 },
+    { key: 'milk', icon: '🥛', name: 'นม', value: 25 },
+  ];
+  let fullness = 60;            // 0..100, slowly goes down
+  const hungry = () => fullness < 30;
+  let bowl = null;
+
+  function showBelly() {
+    bellyFill.style.width = Math.round(fullness) + '%';
+    bellyEl.classList.toggle('hungry', hungry());
+    bellyEl.title = 'ความอิ่ม ' + Math.round(fullness) + '%';
+  }
+  setInterval(() => {
+    const wasHungry = hungry();
+    fullness = Math.max(0, fullness - (cat.mode === 'sleep' ? 0.5 : 1));
+    showBelly();
+    if (!wasHungry && hungry() && cat.mode === 'awake') mood('🥺 หิวจัง');
+  }, 3000);
+
+  function removeBowl() {
+    if (!bowl) return;
+    const el = bowl.el;
+    bowl = null;
+    el.classList.add('gone');
+    setTimeout(() => el.remove(), 500);
+  }
+
+  function feed(food) {
+    if (cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating' || bowl) return;
+    const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
+    clearTimers(); stopWalking();
+    cat.lastPoke = performance.now();
+
+    if (fullness >= 95) {
+      cat.mode = 'action';
+      setClasses(['nope']); face('closed', 'w');
+      say(pick(['อิ่มแล้ว กินไม่ไหวแล้ว~', 'พุงจะแตกแล้วน้า~', 'ไว้ทีหลังนะ อิ่มมาก']), 1800);
+      later(() => setMode('awake'), 1400);
+      return;
+    }
+
+    // put a bowl somewhere on the floor, not right on top of the pet
+    let bx = rand(size * 0.7, W - size * 0.7);
+    if (Math.abs(bx - cat.x) < size * 0.6) bx = cat.x < W / 2 ? Math.min(W - size * 0.7, cat.x + size) : Math.max(size * 0.7, cat.x - size);
+    const by = Math.min(floorBottom - 4, Math.max(floorTop + 40, cat.y + rand(-30, 30)));
+    const el = document.createElement('div');
+    el.className = 'bowl';
+    el.style.setProperty('--pos', `translate(${bx - 38}px, ${by - 56}px)`);
+    el.style.transform = `translate(${bx - 38}px, ${by - 56}px)`;
+    el.innerHTML = `<div class="food">${food.icon}</div><svg viewBox="0 0 76 34"><ellipse cx="38" cy="8" rx="34" ry="7" fill="#ffb3c8" stroke="#6b3a4a" stroke-width="2.5"/><path d="M4 8 Q8 32 38 32 Q68 32 72 8" fill="#ff7aa2" stroke="#6b3a4a" stroke-width="2.5"/><path d="M14 20 Q38 26 62 20" fill="none" stroke="#fff" stroke-width="2.5" opacity=".7"/></svg>`;
+    stage.appendChild(el);
+    bowl = { el, x: bx, y: by, food };
+
+    cat.mode = 'eating';
+    setClasses([]);
+    const fav = (pet.fav || ['meat', 'bone']).includes(food.key);
+    if (wasAsleep) { face('wide', 'o'); say('ฟุดฟิด… กลิ่นอะไรหอมๆ!', 1300); }
+    else { face('star', 'grin'); say(fav ? pick([`${food.name}!! ของโปรดเลย!`, `ว้าว ${food.name}! 😋`]) : pick(['ข้าวมาแล้ว!', 'หม่ำๆ!', 'น่ากินจัง~']), 1300); }
+    mood('😋 หิวแล้ว!');
+    later(() => {
+      if (!bowl) return;
+      face('happy', 'grin');
+      const side = bowl.x >= cat.x ? -1 : 1;
+      walkTo(bowl.x + side * size * 0.5, bowl.y - 10, 230, () => eat(fav));
+      catEl.classList.add('run');
+    }, wasAsleep ? 900 : 350);
+  }
+
+  function eat(fav) {
+    if (!bowl) return;
+    cat.face = bowl.x >= cat.x ? 1 : -1;
+    setClasses(['eat']);
+    face('closed', 'o');
+    mood('😋 งั่มๆ');
+    const foodEl = bowl.el.querySelector('.food');
+    const bites = 4;
+    for (let i = 0; i < bites; i++) {
+      later(() => {
+        if (!bowl) return;
+        face(i % 2 ? 'closed' : 'happy', i % 2 ? 'o' : 'w');
+        say(pick(['งั่มๆ', 'หม่ำๆ', 'อร่อยย~', 'จั๊บๆ']), 600);
+        foodEl.style.transform = `translateX(-50%) scale(${1 - (i + 1) / bites * 0.85})`;
+        for (let k = 0; k < 3; k++) fx('•', { at: { x: bowl.x, y: bowl.y - 30, s: 1 }, dx: rand(-40, 40), dy: rand(-40, -10), size: rand(10, 16), color: '#c98a45', dur: .7 });
+      }, 300 + i * 650);
+    }
+    later(() => {
+      if (!bowl) return;
+      foodEl.style.opacity = '0';
+      fullness = Math.min(100, fullness + bowl.food.value + (fav ? 10 : 0));
+      showBelly();
+      setClasses(['full']);
+      face(fav ? 'heart' : 'happy', 'smile');
+      say(fav ? pick(['ของโปรด! อร่อยที่สุดเลย ♥', 'อิ่มแปล้ ขอบคุณน้า ♥']) : pick(['อิ่มแล้ว~ อร่อยจัง!', 'เอิ้ก~ อิ่มจัง', 'ขอบคุณที่เลี้ยงข้าวน้า~']), 2000);
+      floaty(HEARTS, fav ? 7 : 4, PINKS);
+      mood('😊 อิ่มแปล้');
+    }, 300 + bites * 650);
+    later(() => removeBowl(), 300 + bites * 650 + 1200);
+    later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 300 + bites * 650 + 2200);
+  }
+
+  FOODS.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'food-btn'; b.textContent = f.icon;
+    b.title = 'ให้' + f.name; b.setAttribute('aria-label', 'ให้' + f.name);
+    b.addEventListener('click', e => { e.stopPropagation(); feed(f); });
+    foodsEl.appendChild(b);
+  });
+  foodsEl.addEventListener('click', e => e.stopPropagation());
+  foodsEl.addEventListener('pointerdown', e => e.stopPropagation());
+  showBelly();
+
   // ---------- choosing a pet ----------
   function mountPet(p) {
     pet = p;
@@ -1268,7 +1431,7 @@ const PetArt = (() => {
   }
   function switchPet(p) {
     if (p === pet || cat.mode === 'drag' || cat.mode === 'falling') return;
-    clearTimers(); stopWalking(); hush();
+    clearTimers(); stopWalking(); hush(); removeBowl();
     cat.mode = 'action';
     setClasses(['poof']);
     burst(['✦', '✧', '☁'], 10, GOLDS.concat(['#ffffff']));
