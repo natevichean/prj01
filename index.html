@@ -127,6 +127,7 @@
     background: var(--chip-bg); border: 1px solid var(--chip-border); border-radius: 999px;
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     z-index: 5; cursor: default; white-space: nowrap;
+    max-width: calc(100% - 32px); overflow-x: auto; scrollbar-width: none;
   }
   .foods-label { font-size: 13px; color: var(--ink-soft); padding: 0 4px 0 6px; }
   .food-btn {
@@ -134,6 +135,33 @@
     background: rgba(255, 255, 255, .5); font-size: 22px; line-height: 1; cursor: pointer;
     transition: transform .15s;
   }
+  .food-btn[aria-pressed="true"] { background: rgba(106, 168, 240, .35); box-shadow: 0 0 0 2px #6aa8f0 inset; }
+  .bar-sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--chip-border); }
+  .toy {
+    position: absolute; left: 0; top: 0; z-index: 3;
+    width: 40px; height: 40px; font-size: 34px; line-height: 40px; text-align: center;
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+    animation: toyIn .35s cubic-bezier(.3, 1.6, .5, 1);
+  }
+  .toy:active { cursor: grabbing; }
+  .toy > span { display: inline-block; transition: transform .1s; }
+  .toy.squeak > span { transform: scale(1.25, .7); }
+  .toy-shadow { position: absolute; left: 0; top: 0; width: 34px; height: 9px; border-radius: 50%; background: var(--shadow); z-index: 1; pointer-events: none; }
+  @keyframes toyIn { from { opacity: 0; } to { opacity: 1; } }
+  .toy.gone, .toy-shadow.gone, .feather.gone { transition: opacity .35s; opacity: 0; }
+  .feather { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; font-size: 42px; line-height: 1; }
+  .feather > span { display: inline-block; transform-origin: 20% 90%; animation: featherWiggle .5s ease-in-out infinite alternate; }
+  @keyframes featherWiggle { from { transform: rotate(-18deg); } to { transform: rotate(14deg); } }
+  #stage.wand { cursor: none; }
+  .cat.kick .jumper { animation: kickHop .5s ease-out; }
+  .cat.kick .arm-r { animation: swipe .5s ease-out; }
+  .cat.kick .foot-r { animation: kickFoot .5s ease-out; }
+  @keyframes kickHop { 0% { transform: none; } 30% { transform: translateY(-12%) rotate(-6deg); } 60% { transform: scale(1.08, .92); } 100% { transform: none; } }
+  @keyframes swipe { 0% { transform: none; } 35% { transform: rotate(-125deg); } 70% { transform: rotate(-40deg); } 100% { transform: none; } }
+  @keyframes kickFoot { 40% { transform: translate(6px, -10px) rotate(-20deg); } }
+  .cat.hug .arm-l { transform: rotate(-42deg); }
+  .cat.hug .arm-r { transform: rotate(42deg); }
+  .cat.hug .jumper { animation: lovePulse .4s ease-in-out 2; }
   .food-btn:hover { transform: translateY(-2px) scale(1.08); }
   .food-btn:active { transform: scale(.9); }
   .bowl {
@@ -535,7 +563,8 @@
     .bubble { font-size: 15px; }
     #hint { display: none; }
     .foods-label { display: none; }
-    .food-btn { width: 36px; height: 36px; font-size: 20px; }
+    .food-btn { width: 32px; height: 32px; font-size: 18px; }
+    #foods { gap: 4px; padding: 4px 6px; }
     .meter { width: 56px; }
     .pet-btn { width: 56px; font-size: 11px; }
     .pet-btn .thumb { width: 38px; height: 38px; }
@@ -560,7 +589,7 @@
     <div id="hint" class="chip">แตะน้องเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
   </div>
 
-  <div id="foods" role="toolbar" aria-label="ให้อาหาร"><span class="foods-label">ให้อาหาร</span></div>
+  <div id="foods" role="toolbar" aria-label="ให้อาหารและของเล่น"><span class="foods-label">ให้อาหาร</span></div>
   <div id="picker" role="toolbar" aria-label="เลือกสัตว์เลี้ยง"></div>
 
   <div id="cat" class="cat" role="button" tabindex="0" aria-label="สัตว์เลี้ยง แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
@@ -820,7 +849,7 @@ const PetArt = (() => {
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
   // ---------- presentation helpers ----------
-  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof', 'eat', 'full', 'nope'];
+  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof', 'eat', 'full', 'nope', 'kick', 'hug'];
   const MINI_CLASSES = ['look', 'groom', 'twitch', 'tailflick', 'sigh', 'yawn', 'stir'];
   const ACTION_CLASSES = ['a-wave', 'a-jump', 'a-excited', 'a-spin', 'a-love', 'a-dance', 'a-flip', 'a-peek', 'a-boo', 'a-giggle', 'a-pounce', 'a-zoom'];
 
@@ -928,7 +957,7 @@ const PetArt = (() => {
     stopWalking();
     setClasses(m === 'awake' || m === 'action' ? [] : [m]);
     const now = performance.now();
-    if (m === 'awake') { face('open', 'smile'); mood(hungry() ? '🥺 หิวจัง' : '😸 ร่าเริง'); cat.nextIdle = now + rand(800, 2000); }
+    if (m === 'awake') { face('open', 'smile'); mood(hungry() ? '🥺 หิวจัง' : '😸 ร่าเริง'); cat.nextIdle = now + (play.fresh ? 300 : rand(800, 2000)); }
     if (m === 'bored') { face('flat', 'flat'); mood('😑 เบื่อจัง…'); say(pick(['เฮ้อ… ไม่มีใครเล่นด้วยเลย', 'เบื่อจัง~', 'เฮ้อออ…']), 2200); cat.nextIdle = now + rand(2500, 4000); }
     if (m === 'sleepy') { face('half', 'w'); mood('🥱 ง่วงนอน…'); yawn(); cat.nextIdle = now + rand(3500, 5000); }
     if (m === 'sleep') { face('closed', 'w'); mood('😴 หลับปุ๋ย'); hush(); cat.nextIdle = now + 900; }
@@ -940,6 +969,8 @@ const PetArt = (() => {
     if (cat.mode === 'awake') {
       cat.nextIdle = now + rand(1800, 4200);
       if (cat.target) return;
+      if (toy && toy.kind === 'wand' && now > play.restUntil) { startChase(); return; }
+      if (toy && toy.kind === 'phys' && now > play.restUntil && (play.fresh || Math.random() < 0.4)) { startPlay(); return; }
       if (hungry() && Math.random() < 0.35) {
         mini('nope', 1200, 'half', 'o');
         say(pick(['หิวจัง… 🥺', 'ท้องร้องจ๊อกๆ…', 'ขอข้าวหน่อยน้า~', 'มีอะไรกินบ้าง?']), 1800);
@@ -1172,6 +1203,7 @@ const PetArt = (() => {
   catEl.addEventListener('pointercancel', endPointer);
 
   function startDrag() {
+    play.busy = false; play.restUntil = performance.now() + 6000;
     const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
     clearTimers(); stopWalking(); hush();
     drag.active = true;
@@ -1228,6 +1260,7 @@ const PetArt = (() => {
       return;
     }
     if (cat.mode === 'groggy' || cat.mode === 'action' || cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating') return;
+    if (toy && toy.kind === 'wand') return;
     if (cat.mode === 'sleepy') { cat.lastPoke = now; wakeUpGroggy(); return; }
     cat.lastPoke = now;
     if (cat.mode === 'bored') setMode('awake');
@@ -1252,6 +1285,8 @@ const PetArt = (() => {
     if (cat.mode === 'awake' && idleFor > T_BORED) setMode('bored');
     else if (cat.mode === 'bored' && idleFor > T_SLEEPY) setMode('sleepy');
     else if (cat.mode === 'sleepy' && idleFor > T_SLEEP) setMode('sleep');
+
+    toyTick(dt, now);
 
     if (cat.mode === 'drag') {
       const want = Math.max(-28, Math.min(28, -drag.vx * 22)) * cat.face;
@@ -1337,6 +1372,7 @@ const PetArt = (() => {
 
   function feed(food) {
     if (cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating' || bowl) return;
+    play.busy = false; play.restUntil = performance.now() + 6000;
     const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
     clearTimers(); stopWalking();
     cat.lastPoke = performance.now();
@@ -1419,6 +1455,265 @@ const PetArt = (() => {
   foodsEl.addEventListener('pointerdown', e => e.stopPropagation());
   showBelly();
 
+  // ---------- toys ----------
+  const TOYS = {
+    ball: { icon: '<svg viewBox="0 0 40 40" width="1em" height="1em" style="vertical-align:-.12em"><circle cx="20" cy="20" r="17" fill="#d7f046" stroke="#6a7a12" stroke-width="2"/><path d="M6 12 Q20 20 6 30 M34 10 Q20 20 34 30" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>', name: 'ลูกบอล', kind: 'phys', bounce: .62, friction: .35 },
+    yarn: { icon: '🧶', name: 'ไหมพรม', kind: 'phys', bounce: .3, friction: .55 },
+    duck: { icon: '🦆', name: 'เป็ดบีบ', kind: 'phys', bounce: .45, friction: .25 },
+    feather: { icon: '🪶', name: 'ไม้ขนนก', kind: 'wand' },
+  };
+  let toy = null;
+  const play = { busy: false, count: 0, max: 5, cool: 0, start: 0, restUntil: 0 };
+  const toyButtons = {};
+
+  function removeToy() {
+    if (!toy) return;
+    const t = toy;
+    toy = null;
+    [t.el, t.shadow].forEach(el => { if (!el) return; el.classList.add('gone'); setTimeout(() => el.remove(), 400); });
+    stage.classList.remove('wand');
+    Object.values(toyButtons).forEach(b => b.setAttribute('aria-pressed', 'false'));
+    if (cat.mode === 'play' || cat.mode === 'chase') setMode('awake');
+  }
+
+  function placeToy(type) {
+    const def = TOYS[type];
+    const same = toy && toy.type === type;
+    removeToy();
+    if (same) return;                      // tapping the active toy again puts it away
+    toyButtons[type].setAttribute('aria-pressed', 'true');
+    play.restUntil = 0; play.fresh = true;
+    if (def.kind === 'wand') {
+      const el = document.createElement('div');
+      el.className = 'feather';
+      el.innerHTML = `<span>${def.icon}</span>`;
+      stage.appendChild(el);
+      stage.classList.add('wand');
+      toy = { type, kind: 'wand', el, x: W / 2, y: floorTop - 30 };
+      startChase();
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'toy';
+    el.innerHTML = `<span>${def.icon}</span>`;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', def.name);
+    const shadow = document.createElement('div');
+    shadow.className = 'toy-shadow';
+    stage.append(shadow, el);
+    const fromLeft = cat.x > W / 2;
+    toy = {
+      type, kind: 'phys', def, el, shadow,
+      x: fromLeft ? 40 : W - 40, y: rand(floorTop + 40, floorBottom - 10), z: 160,
+      vx: (fromLeft ? 1 : -1) * rand(260, 380), vy: rand(-40, 40), vz: 120, rot: 0, held: false,
+    };
+    bindToy(toy);
+    startPlay();
+  }
+
+  function bindToy(t) {
+    const hold = { id: null, moved: false, lx: 0, ly: 0, lt: 0, vx: 0, vy: 0, sx: 0, sy: 0 };
+    t.el.addEventListener('click', e => e.stopPropagation());
+    t.el.addEventListener('pointerdown', e => {
+      e.stopPropagation(); e.preventDefault();
+      hold.id = e.pointerId; hold.moved = false;
+      hold.sx = hold.lx = e.clientX; hold.sy = hold.ly = e.clientY; hold.lt = performance.now(); hold.vx = hold.vy = 0;
+      t.el.setPointerCapture(e.pointerId);
+      t.held = true;
+    });
+    t.el.addEventListener('pointermove', e => {
+      if (e.pointerId !== hold.id) return;
+      const now = performance.now(), dt = Math.max(8, now - hold.lt);
+      hold.vx = hold.vx * .5 + (e.clientX - hold.lx) / dt * 1000 * .5;
+      hold.vy = hold.vy * .5 + (e.clientY - hold.ly) / dt * 1000 * .5;
+      hold.lx = e.clientX; hold.ly = e.clientY; hold.lt = now;
+      if (Math.hypot(e.clientX - hold.sx, e.clientY - hold.sy) > 6) hold.moved = true;
+      const groundTop = floorTop + 20;
+      t.x = Math.min(Math.max(e.clientX, 20), W - 20);
+      t.y = Math.min(Math.max(e.clientY + 20, groundTop), floorBottom);
+      t.z = Math.max(0, groundTop - (e.clientY + 20));
+      t.vx = t.vy = t.vz = 0;
+    });
+    const release = e => {
+      if (e.pointerId !== hold.id) return;
+      hold.id = null;
+      t.held = false;
+      if (hold.moved) {
+        t.vx = Math.max(-900, Math.min(900, hold.vx));
+        t.vy = Math.max(-300, Math.min(300, hold.vy * 0.4));
+        t.vz = Math.max(60, Math.min(600, -hold.vy * 0.6));
+      } else {
+        // a plain tap gives the toy a little flick
+        t.vx = rand(-1, 1) * 260; t.vy = rand(-60, 60); t.vz = 340;
+        if (t.type === 'duck') squeak(t);
+      }
+      cat.lastPoke = performance.now();
+      play.restUntil = 0;
+      if (cat.mode === 'awake' || cat.mode === 'bored' || cat.mode === 'play') startPlay();
+      else if (cat.mode === 'sleep' || cat.mode === 'sleepy') wakeUpGroggy();
+    };
+    t.el.addEventListener('pointerup', release);
+    t.el.addEventListener('pointercancel', release);
+  }
+
+  function squeak(t) {
+    t.el.classList.add('squeak');
+    setTimeout(() => t.el.classList.remove('squeak'), 160);
+    fx('ปี๊บ!', { at: { x: t.x, y: t.y - t.z - 40, s: 1 }, dx: rand(-20, 20), dy: -50, size: 18, color: '#ff8a00', dur: 1 });
+  }
+
+  function startPlay() {
+    if (!toy || toy.kind !== 'phys') return;
+    if (['drag', 'falling', 'eating', 'groggy', 'action'].includes(cat.mode)) return;
+    if (cat.mode === 'sleep' || cat.mode === 'sleepy') { wakeUpGroggy(); return; }
+    clearTimers(); stopWalking();
+    play.fresh = false;
+    cat.mode = 'play';
+    setClasses([]);
+    play.busy = false; play.count = 0; play.max = Math.round(rand(4, 7)); play.start = performance.now();
+    face('star', 'grin');
+    mood('🤩 เล่นสนุก!');
+    say(pick({ ball: ['ลูกบอล!', 'เล่นบอลกัน!'], yarn: ['ไหมพรม! ขอเล่นๆ', 'กลมๆ ม้วนๆ~'], duck: ['เป็ดน้อย! ปี๊บๆ', 'ของเล่นใหม่!'] }[toy.type]), 1400);
+  }
+
+  function startChase() {
+    if (!toy || toy.kind !== 'wand') return;
+    if (['drag', 'falling', 'eating', 'groggy', 'action'].includes(cat.mode)) return;
+    if (cat.mode === 'sleep' || cat.mode === 'sleepy') { wakeUpGroggy(); return; }
+    clearTimers(); stopWalking();
+    cat.mode = 'chase';
+    setClasses([]);
+    play.busy = false; play.cool = 0; play.start = performance.now();
+    face('wide', 'w');
+    mood('🤩 ไล่จับ!');
+    say(pick(['ขนนก! จะจับให้ได้!', 'อะไรขยับๆ น่ะ!?', 'มาเล่นกัน!']), 1400);
+  }
+
+  function endPlay(text) {
+    play.restUntil = performance.now() + 9000;
+    setMode('awake');
+    face('happy', 'smile');
+    say(text || pick(['สนุกจัง! พักก่อนน้า~', 'เหนื่อยแล้ว แต่สนุกมาก!', 'แฮ่กๆ เล่นอีกทีหลังนะ']), 1800);
+    floaty(['✦', '♡'], 3, GOLDS.concat(PINKS));
+  }
+
+  function batToy() {
+    if (!toy || toy.kind !== 'phys' || cat.mode !== 'play' || play.busy || toy.held || toy.z > 30) return;
+    const t = toy;
+    play.busy = true;
+    play.count++;
+    cat.face = t.x >= cat.x ? 1 : -1;
+    cat.lastPoke = performance.now();
+    fullness = Math.max(0, fullness - 1.5); showBelly();
+    const dir = cat.face;
+    let hitAt = 150, done = 600;
+    if (t.type === 'ball') {
+      setClasses(['kick']); face('happy', 'grin');
+      if (Math.random() < .6) say(pick(['เตะ!', 'ซู้ดด!', 'โกล~!', 'รับนะ!']), 800);
+      later(() => { t.vx = dir * rand(320, 520); t.vy = rand(-120, 120); t.vz = rand(240, 420); }, hitAt);
+    } else if (t.type === 'yarn') {
+      if (play.count % 2) {
+        setClasses(['a-pounce']); face('wide', 'w'); say(pick(['ตะครุบ!', 'จับได้แล้ว!']), 900);
+        hitAt = 760; done = 1250;
+      } else {
+        setClasses(['kick']); face('happy', 'w'); if (Math.random() < .5) say(pick(['ม้วนๆ~', 'ขยุ้มๆ', 'กลิ้งไป~']), 800);
+      }
+      later(() => { t.vx = dir * rand(160, 280); t.vy = rand(-80, 80); t.vz = rand(40, 120); }, hitAt);
+    } else {
+      setClasses(['hug']); face('heart', 'smile'); say(pick(['ปี๊บๆ! ชอบจัง', 'กอดเป็ดน้อย~', 'บีบๆ ปี๊บ!']), 1000);
+      later(() => squeak(t), 200); later(() => squeak(t), 520);
+      hitAt = 850; done = 1200;
+      later(() => { t.vx = dir * rand(120, 220); t.vy = rand(-60, 60); t.vz = rand(300, 420); }, hitAt);
+    }
+    later(() => {
+      play.busy = false;
+      setClasses([]);
+      face('star', 'grin');
+      if (play.count >= play.max) endPlay();
+    }, done);
+  }
+
+  function toyTick(dt, now) {
+    if (!toy) return;
+    if (toy.kind === 'phys') {
+      const t = toy, d = t.def;
+      if (!t.held) {
+        t.vz -= 1500 * dt;
+        t.z += t.vz * dt;
+        if (t.z <= 0) {
+          t.z = 0;
+          if (t.vz < -120) { t.vz = -t.vz * d.bounce; if (t.type === 'duck' && Math.random() < .3) squeak(t); } else t.vz = 0;
+        }
+        t.x += t.vx * dt; t.y += t.vy * dt;
+        if (t.z === 0) { const k = Math.pow(d.friction, dt); t.vx *= k; t.vy *= k; }
+        if (t.x < 20) { t.x = 20; t.vx = Math.abs(t.vx) * .7; }
+        if (t.x > W - 20) { t.x = W - 20; t.vx = -Math.abs(t.vx) * .7; }
+        if (t.y < floorTop + 20) { t.y = floorTop + 20; t.vy = Math.abs(t.vy) * .6; }
+        if (t.y > floorBottom) { t.y = floorBottom; t.vy = -Math.abs(t.vy) * .6; }
+        if (t.type !== 'duck') t.rot += t.vx * dt * 3;
+      }
+      t.el.style.transform = `translate(${t.x - 20}px, ${t.y - t.z - 38}px) rotate(${t.rot.toFixed(1)}deg)`;
+      const sh = Math.max(.35, 1 - t.z / 260);
+      t.shadow.style.transform = `translate(${t.x - 17}px, ${t.y - 6}px) scale(${sh})`;
+
+      if (cat.mode === 'play' && !play.busy) {
+        if (now - play.start > 30000) { endPlay(); return; }
+        const side = t.x >= cat.x ? -1 : 1;
+        const half = size * 0.4;
+        const tx = Math.min(Math.max(t.x + side * size * 0.3, half), W - half);
+        cat.target = { x: tx, y: Math.min(Math.max(t.y - 4, floorTop + 20), floorBottom) };
+        cat.speed = t.type === 'ball' ? 280 : 220;
+        cat.onArrive = batToy;
+      }
+    } else {
+      // the feather follows the pointer, or hovers in the middle until the pointer moves
+      const tx = pointer.x >= 0 ? pointer.x : W / 2 + Math.sin(now / 700) * 120;
+      const ty = pointer.y >= 0 ? pointer.y : floorTop - 30 + Math.cos(now / 500) * 30;
+      toy.x = tx; toy.y = ty;
+      toy.el.style.transform = `translate(${tx - 8}px, ${ty - 38}px)`;
+      if (cat.mode === 'chase' && !play.busy) {
+        if (now - play.start > 30000) { removeToyAfterChase(); return; }
+        const s = scale();
+        const half = size * 0.4;
+        const gy = Math.min(Math.max(ty + size * s * 0.5, floorTop + 20), floorBottom);
+        const near = Math.abs(cat.x - tx) < size * s * 0.45;
+        const headY = cat.y - size * s * 0.7;
+        if (near && ty > headY - size * s * 0.9 && ty < cat.y && now > play.cool) {
+          play.busy = true; play.cool = now + 1300;
+          stopWalking();
+          cat.face = tx >= cat.x ? 1 : -1;
+          cat.lastPoke = now;
+          fullness = Math.max(0, fullness - 1); showBelly();
+          const high = ty < headY - size * s * 0.2;
+          setClasses([high ? 'a-jump' : 'kick']);
+          face('happy', 'grin');
+          say(pick(['ตะครุบ!', 'เกือบได้!', 'ได้แล้ว!', 'ฮึบ!']), 800);
+          later(() => { play.busy = false; setClasses([]); face('wide', 'w'); }, high ? 1050 : 550);
+        } else {
+          cat.target = { x: Math.min(Math.max(tx, half), W - half), y: gy };
+          cat.speed = 240;
+          cat.onArrive = null;
+        }
+      }
+    }
+  }
+  function removeToyAfterChase() {
+    play.restUntil = performance.now() + 9000;
+    endPlay(pick(['เหนื่อยแล้ว ขอพักแป๊บ~', 'แฮ่กๆ จับไม่ได้สักที!']));
+  }
+
+  const sep = document.createElement('span'); sep.className = 'bar-sep';
+  const toyLabel = document.createElement('span'); toyLabel.className = 'foods-label'; toyLabel.textContent = 'ของเล่น';
+  foodsEl.append(sep, toyLabel);
+  Object.entries(TOYS).forEach(([type, def]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'food-btn'; b.innerHTML = def.icon;
+    b.title = def.name; b.setAttribute('aria-label', def.name); b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', e => { e.stopPropagation(); placeToy(type); });
+    toyButtons[type] = b;
+    foodsEl.appendChild(b);
+  });
+
   // ---------- choosing a pet ----------
   function mountPet(p) {
     pet = p;
@@ -1431,7 +1726,7 @@ const PetArt = (() => {
   }
   function switchPet(p) {
     if (p === pet || cat.mode === 'drag' || cat.mode === 'falling') return;
-    clearTimers(); stopWalking(); hush(); removeBowl();
+    clearTimers(); stopWalking(); hush(); removeBowl(); play.busy = false;
     cat.mode = 'action';
     setClasses(['poof']);
     burst(['✦', '✧', '☁'], 10, GOLDS.concat(['#ffffff']));
