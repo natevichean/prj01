@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>แมวลายวัวสีฟ้า</title>
+<title>สัตว์เลี้ยงขี้เล่น</title>
 <style>
   :root {
     --sky-top: #dff1ff;
@@ -114,6 +114,31 @@
   #mood.pop { transform: scale(1.12); }
   #hint { color: var(--ink-soft); font-size: 13px; }
 
+  #picker {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    display: flex; gap: 6px; padding: 6px;
+    overflow-x: auto; scrollbar-width: none;
+    background: var(--chip-bg); border: 1px solid var(--chip-border); border-radius: 22px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 5; cursor: default;
+  }
+  #picker::-webkit-scrollbar { display: none; }
+  .pet-btn {
+    flex: 0 0 auto; width: 64px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 4px 2px 6px; border: 2px solid transparent; border-radius: 16px;
+    background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
+    transition: transform .15s, background .15s, border-color .15s;
+  }
+  .pet-btn:hover { transform: translateY(-2px); background: rgba(127, 170, 220, .14); }
+  .pet-btn[aria-pressed="true"] { border-color: #6aa8f0; background: rgba(106, 168, 240, .18); font-weight: 600; }
+  .pet-btn .thumb { width: 44px; height: 44px; }
+  .pet-btn .thumb svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .pet-btn .thumb .tail, .pet-btn .thumb .eyes-open, .pet-btn .thumb .e-star, .pet-btn .thumb .e-heart { animation: none; }
+  .cat.poof .jumper { animation: poof .5s ease-in-out; }
+  @keyframes poof { 0% { transform: scale(1); } 45% { transform: scale(.05) rotate(20deg); opacity: .2; } 55% { transform: scale(.05) rotate(-20deg); opacity: .2; } 100% { transform: scale(1); } }
+
   /* ---------- cat ---------- */
   .cat {
     position: absolute; left: 0; top: 0;
@@ -175,23 +200,23 @@
   .nose-bubble { transform-origin: 104px 101px; transform: scale(0); }
 
   .eyes > g, .mouths > g { display: none; }
-  .cat[data-eyes="open"]   .e-open,
-  .cat[data-eyes="happy"]  .e-happy,
-  .cat[data-eyes="half"]   .e-half,
-  .cat[data-eyes="flat"]   .e-flat,
-  .cat[data-eyes="closed"] .e-closed,
-  .cat[data-eyes="star"]   .e-star,
-  .cat[data-eyes="heart"]  .e-heart,
-  .cat[data-eyes="dizzy"]  .e-dizzy,
-  .cat[data-eyes="wide"]   .e-open { display: inline; }
-  .cat[data-eyes="wide"] .eyes-open { animation: none; transform: scale(1.18); }
+  [data-eyes="open"]   .e-open,
+  [data-eyes="happy"]  .e-happy,
+  [data-eyes="half"]   .e-half,
+  [data-eyes="flat"]   .e-flat,
+  [data-eyes="closed"] .e-closed,
+  [data-eyes="star"]   .e-star,
+  [data-eyes="heart"]  .e-heart,
+  [data-eyes="dizzy"]  .e-dizzy,
+  [data-eyes="wide"]   .e-open { display: inline; }
+  [data-eyes="wide"] .eyes-open { animation: none; transform: scale(1.18); }
 
-  .cat[data-mouth="smile"] .m-smile,
-  .cat[data-mouth="grin"]  .m-grin,
-  .cat[data-mouth="w"]     .m-w,
-  .cat[data-mouth="o"]     .m-o,
-  .cat[data-mouth="yawn"]  .m-yawn,
-  .cat[data-mouth="flat"]  .m-flat { display: inline; }
+  [data-mouth="smile"] .m-smile,
+  [data-mouth="grin"]  .m-grin,
+  [data-mouth="w"]     .m-w,
+  [data-mouth="o"]     .m-o,
+  [data-mouth="yawn"]  .m-yawn,
+  [data-mouth="flat"]  .m-flat { display: inline; }
 
   .blush { transition: opacity .3s; opacity: .55; }
   .cat:hover .blush, .cat.blushy .blush { opacity: .95; }
@@ -464,6 +489,9 @@
     .chip { font-size: 13px; padding: 7px 12px; }
     #hint { font-size: 12px; }
     .bubble { font-size: 15px; }
+    #hint { display: none; }
+    .pet-btn { width: 56px; font-size: 11px; }
+    .pet-btn .thumb { width: 38px; height: 38px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .cloud { animation: none; }
@@ -479,154 +507,15 @@
 
   <div id="hud">
     <div id="mood" class="chip">😸 ร่าเริง</div>
-    <div id="hint" class="chip">แตะแมวเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
+    <div id="hint" class="chip">แตะน้องเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
   </div>
 
-  <div id="cat" class="cat" role="button" tabindex="0" aria-label="แมวลายวัวสีฟ้า แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
+  <div id="picker" role="toolbar" aria-label="เลือกสัตว์เลี้ยง"></div>
+
+  <div id="cat" class="cat" role="button" tabindex="0" aria-label="สัตว์เลี้ยง แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
     <div class="shadow"></div>
     <div class="jumper">
       <div class="flip">
-        <svg viewBox="0 0 200 200" aria-hidden="true">
-          <defs>
-            <clipPath id="clipHead"><ellipse cx="100" cy="86" rx="58" ry="47"/></clipPath>
-            <clipPath id="clipBody"><ellipse cx="100" cy="156" rx="44" ry="35"/></clipPath>
-            <path id="star" d="M0.0 -11.0 L2.8 -3.9 L10.5 -3.4 L4.6 1.5 L6.5 8.9 L0.0 4.8 L-6.5 8.9 L-4.6 1.5 L-10.5 -3.4 L-2.8 -3.9Z"/>
-            <path id="heart" d="M0 9 C -14 0, -12 -12, -5 -11 C -2 -11, 0 -8, 0 -6 C 0 -8, 2 -11, 5 -11 C 12 -12, 14 0, 0 9 Z"/>
-          </defs>
-          <g class="rig" stroke-linejoin="round" stroke-linecap="round">
-            <!-- tail -->
-            <g class="tail">
-              <path d="M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113" fill="none" stroke="var(--cat-line)" stroke-width="15"/>
-              <path d="M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113" fill="none" stroke="var(--cat-body)" stroke-width="9"/>
-              <path d="M172 132 C 170 118, 177 107, 186 113" fill="none" stroke="var(--cat-patch)" stroke-width="9"/>
-            </g>
-            <!-- feet -->
-            <g class="foot-l"><ellipse cx="78" cy="187" rx="15" ry="9" fill="var(--cat-belly)" stroke="var(--cat-line)" stroke-width="3"/></g>
-            <g class="foot-r"><ellipse cx="122" cy="187" rx="15" ry="9" fill="var(--cat-patch)" stroke="var(--cat-line)" stroke-width="3"/></g>
-            <!-- body -->
-            <g class="body-g">
-              <ellipse cx="100" cy="156" rx="44" ry="35" fill="var(--cat-body)"/>
-              <g clip-path="url(#clipBody)">
-                <path d="M52 140 C 66 128, 82 136, 80 152 C 78 166, 60 170, 52 162 Z" fill="var(--cat-patch)"/>
-                <path d="M124 166 C 132 154, 150 156, 150 170 C 150 186, 128 192, 122 182 Z" fill="var(--cat-patch)"/>
-                <ellipse cx="100" cy="168" rx="22" ry="20" fill="var(--cat-belly)"/>
-              </g>
-              <ellipse cx="100" cy="156" rx="44" ry="35" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
-            </g>
-            <!-- head -->
-            <g class="head">
-              <g class="ear-l">
-                <path d="M50 64 L56 18 L92 42 Z" fill="var(--cat-patch)" stroke="var(--cat-line)" stroke-width="3"/>
-                <path d="M59 52 L62 31 L80 44 Z" fill="var(--cat-pink)"/>
-              </g>
-              <g class="ear-r">
-                <path d="M150 64 L144 18 L108 42 Z" fill="var(--cat-body)" stroke="var(--cat-line)" stroke-width="3"/>
-                <path d="M141 52 L138 31 L120 44 Z" fill="var(--cat-pink)"/>
-              </g>
-              <ellipse cx="100" cy="86" rx="58" ry="47" fill="var(--cat-body)"/>
-              <g clip-path="url(#clipHead)">
-                <path d="M40 60 C 52 40, 82 44, 88 64 C 94 84, 84 104, 66 104 C 50 104, 38 88, 40 60 Z" fill="var(--cat-patch)"/>
-                <path d="M130 38 C 142 32, 162 40, 160 58 C 158 70, 142 72, 134 62 C 126 54, 124 42, 130 38 Z" fill="var(--cat-patch)"/>
-                <ellipse cx="100" cy="112" rx="30" ry="20" fill="var(--cat-belly)"/>
-              </g>
-              <ellipse cx="100" cy="86" rx="58" ry="47" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
-
-              <!-- blush -->
-              <ellipse class="blush" cx="60" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
-              <ellipse class="blush" cx="140" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
-
-              <!-- eyes -->
-              <g class="eyes">
-                <g class="e-open">
-                  <g class="eyes-open">
-                    <ellipse cx="78" cy="86" rx="10" ry="12" fill="#fff" opacity=".0"/>
-                    <g class="pupils">
-                      <ellipse cx="78" cy="86" rx="8.5" ry="10.5" fill="var(--cat-line)"/>
-                      <circle cx="81" cy="81.5" r="3.4" fill="#fff"/>
-                      <circle cx="75" cy="90" r="1.6" fill="#fff"/>
-                      <ellipse cx="122" cy="86" rx="8.5" ry="10.5" fill="var(--cat-line)"/>
-                      <circle cx="125" cy="81.5" r="3.4" fill="#fff"/>
-                      <circle cx="119" cy="90" r="1.6" fill="#fff"/>
-                    </g>
-                  </g>
-                </g>
-                <g class="e-happy" fill="none" stroke="var(--cat-line)" stroke-width="4">
-                  <path d="M69 90 Q78 77 87 90"/>
-                  <path d="M113 90 Q122 77 131 90"/>
-                </g>
-                <g class="e-half">
-                  <path d="M70 85 Q78 98 86 85 Z" fill="var(--cat-line)"/>
-                  <path d="M114 85 Q122 98 130 85 Z" fill="var(--cat-line)"/>
-                  <path d="M67 85 L89 85 M111 85 L133 85" stroke="var(--cat-line)" stroke-width="3.5"/>
-                </g>
-                <g class="e-flat">
-                  <path d="M70 87 Q78 96 86 87 Z" fill="var(--cat-line)"/>
-                  <path d="M114 87 Q122 96 130 87 Z" fill="var(--cat-line)"/>
-                  <path d="M68 86 L88 84 M112 84 L132 86" stroke="var(--cat-line)" stroke-width="3.5"/>
-                </g>
-                <g class="e-closed" fill="none" stroke="var(--cat-line)" stroke-width="3.5">
-                  <path d="M70 86 Q78 94 86 86"/>
-                  <path d="M114 86 Q122 94 130 86"/>
-                </g>
-                <g class="e-star">
-                  <use href="#star" x="78" y="86"/>
-                  <use href="#star" x="122" y="86"/>
-                </g>
-                <g class="e-heart">
-                  <use href="#heart" x="78" y="87"/>
-                  <use href="#heart" x="122" y="87"/>
-                </g>
-                <g class="e-dizzy" fill="none" stroke="var(--cat-line)" stroke-width="2.6">
-                  <path d="M78 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
-                  <path d="M122 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
-                </g>
-              </g>
-
-              <!-- nose -->
-              <path d="M95 98 Q100 95 105 98 Q100 104 95 98 Z" fill="var(--cat-pink)" stroke="var(--cat-line)" stroke-width="1.6"/>
-              <circle class="nose-bubble" cx="109" cy="100" r="7" fill="rgba(190,230,255,.65)" stroke="rgba(120,180,230,.9)" stroke-width="1.2"/>
-
-              <!-- mouths -->
-              <g class="mouths" stroke="var(--cat-line)" stroke-width="2.6" fill="none">
-                <g class="m-smile">
-                  <path d="M85 106 Q100 132 115 106 Z" fill="var(--cat-mouth)"/>
-                  <path d="M92 118 Q100 112 108 118 Q100 125 92 118 Z" fill="var(--cat-pink)" stroke="none"/>
-                  <path d="M91 103 Q95.5 108 100 103 Q104.5 108 109 103"/>
-                </g>
-                <g class="m-grin">
-                  <path d="M80 105 Q100 140 120 105 Z" fill="var(--cat-mouth)"/>
-                  <path d="M89 121 Q100 113 111 121 Q100 131 89 121 Z" fill="var(--cat-pink)" stroke="none"/>
-                  <path d="M89 103 Q94.5 108 100 103 Q105.5 108 111 103"/>
-                </g>
-                <g class="m-w"><path d="M90 104 Q95 110 100 104 Q105 110 110 104"/></g>
-                <g class="m-o">
-                  <path d="M91 103 Q95.5 107 100 103 Q104.5 107 109 103"/>
-                  <ellipse cx="100" cy="114" rx="6" ry="7" fill="var(--cat-mouth)"/>
-                </g>
-                <g class="m-yawn">
-                  <ellipse cx="100" cy="116" rx="11" ry="14" fill="var(--cat-mouth)"/>
-                  <ellipse cx="100" cy="124" rx="7" ry="4.5" fill="var(--cat-pink)" stroke="none"/>
-                </g>
-                <g class="m-flat"><path d="M90 109 Q95 105 100 109 Q105 113 110 109"/></g>
-              </g>
-
-              <!-- whiskers -->
-              <g stroke="var(--cat-line)" stroke-width="2" opacity=".7">
-                <path d="M46 96 L26 92 M46 102 L24 104"/>
-                <path d="M154 96 L174 92 M154 102 L176 104"/>
-              </g>
-            </g>
-            <!-- arms -->
-            <g class="arm-l">
-              <rect x="66" y="128" width="17" height="42" rx="8.5" fill="var(--cat-body)" stroke="var(--cat-line)" stroke-width="3"/>
-              <path d="M71 165 L71 169 M78 165 L78 169" stroke="var(--cat-line)" stroke-width="2"/>
-            </g>
-            <g class="arm-r">
-              <rect x="117" y="128" width="17" height="42" rx="8.5" fill="var(--cat-patch)" stroke="var(--cat-line)" stroke-width="3"/>
-              <path d="M122 165 L122 169 M129 165 L129 169" stroke="#cfe6ff" stroke-width="2"/>
-            </g>
-          </g>
-        </svg>
       </div>
     </div>
     <div class="bubble" id="bubble"></div>
@@ -634,13 +523,214 @@
 </div>
 
 <script>
+// ---------- pet designs: every pet shares the same rig (head, ears, arms, feet, tail) so all animations work ----------
+const PetArt = (() => {
+  const E = (cx, cy, rx, ry) => `M${cx - rx} ${cy} a${rx} ${ry} 0 1 0 ${2 * rx} 0 a${rx} ${ry} 0 1 0 ${-2 * rx} 0Z`;
+  // scalloped "fluffy" outline around an ellipse
+  function fluff(cx, cy, rx, ry, n, amp) {
+    const pt = (a, k) => [(cx + Math.cos(a) * rx * k).toFixed(1), (cy + Math.sin(a) * ry * k).toFixed(1)];
+    let d = `M${pt(0, 1).join(' ')}`;
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
+      const c = pt((a0 + a1) / 2, 1 + amp * 2), p = pt(a1, 1);
+      d += ` Q${c.join(' ')} ${p.join(' ')}`;
+    }
+    return d + 'Z';
+  }
+  // mirror absolute "x y" pairs across the face centre
+  const mirror = d => d.replace(/(-?\d+\.?\d*)[ ,](-?\d+\.?\d*)/g, (m, x, y) => `${(200 - x).toFixed(1).replace(/\.0$/, '')} ${y}`);
+  const fill = (d, f, stroke = true, w = 3) => `<path d="${d}" fill="${f}"${stroke ? ` stroke="var(--cat-line)" stroke-width="${w}"` : ''}/>`;
+  const tailStroke = (d, w, color, tip) =>
+    `<path d="${d}" fill="none" stroke="var(--cat-line)" stroke-width="${w + 6}"/><path d="${d}" fill="none" stroke="${color}" stroke-width="${w}"/>` +
+    (tip ? `<path d="${tip}" fill="none" stroke="${tip.color || 'var(--cat-belly)'}" stroke-width="${w}"/>` : '');
+  const pair = (d, f, stroke) => fill(d, f, stroke) + fill(mirror(d), f, stroke);
+
+  const B = 'var(--cat-body)', P = 'var(--cat-patch)', W = 'var(--cat-belly)', K = 'var(--cat-pink)';
+  const HEAD = E(100, 86, 58, 47), BODY = E(100, 156, 44, 35);
+
+  const PETS = [
+    {
+      key: 'cat', name: 'แมว', label: 'แมวลายวัวสีฟ้า', sound: 'เหมียว', dream: 'ปลาทู', scale: 1, nose: 'cat', whiskers: true,
+      colors: { body: '#8fd0f7', patch: '#2f70b9', belly: '#eaf7ff', line: '#1d3d61', pink: '#ff9cbc' },
+      head: HEAD, body: BODY,
+      earL: fill('M50 64 L56 18 L92 42 Z', P) + fill('M59 52 L62 31 L80 44 Z', K, false),
+      earR: fill('M150 64 L144 18 L108 42 Z', B) + fill('M141 52 L138 31 L120 44 Z', K, false),
+      headMarks: fill('M40 60 C 52 40, 82 44, 88 64 C 94 84, 84 104, 66 104 C 50 104, 38 88, 40 60 Z', P, false) +
+        fill('M130 38 C 142 32, 162 40, 160 58 C 158 70, 142 72, 134 62 C 126 54, 124 42, 130 38 Z', P, false) +
+        fill(E(100, 112, 30, 20), W, false),
+      bodyMarks: fill('M52 140 C 66 128, 82 136, 80 152 C 78 166, 60 170, 52 162 Z', P, false) +
+        fill('M124 166 C 132 154, 150 156, 150 170 C 150 186, 128 192, 122 182 Z', P, false) + fill(E(100, 168, 22, 20), W, false),
+      tail: tailStroke('M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113', 9, B) +
+        `<path d="M172 132 C 170 118, 177 107, 186 113" fill="none" stroke="${P}" stroke-width="9"/>`,
+      armL: B, armR: P, footL: W, footR: P, toe: '#cfe6ff',
+    },
+    {
+      key: 'bangkaew', name: 'บางแก้ว', label: 'หมาบางแก้ว', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1,
+      colors: { body: '#fffaf2', patch: '#d99a55', belly: '#ffffff', line: '#5b3b22', pink: '#ffb3c1' },
+      head: HEAD, body: fluff(100, 156, 45, 35, 18, .05),
+      behindHead: fill(fluff(100, 122, 64, 28, 18, .1), B),
+      earL: fill('M56 60 L64 20 L92 44 Z', P) + fill('M64 52 L67 32 L82 45 Z', K, false),
+      earR: fill(mirror('M56 60 L64 20 L92 44 Z'), P) + fill(mirror('M64 52 L67 32 L82 45 Z'), K, false),
+      headMarks: pair('M36 72 C 42 40, 80 34, 92 50 C 94 64, 86 76, 72 78 C 58 80, 40 88, 36 72 Z', P, false) + fill(E(100, 110, 28, 19), W, false),
+      bodyMarks: fill('M50 146 C 60 132, 78 140, 74 156 C 70 170, 54 168, 50 160 Z', P, false) + fill(E(100, 168, 22, 20), W, false),
+      tail: tailStroke('M134 162 C 172 160, 180 118, 158 106 C 144 98, 134 112, 146 122', 18, B) +
+        `<path d="M160 108 C 150 104, 140 110, 146 122" fill="none" stroke="${P}" stroke-width="10"/>`,
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'ridgeback', name: 'หลังอาน', label: 'หมาไทยหลังอาน', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1.05,
+      colors: { body: '#cc7a3a', patch: '#8a4520', belly: '#eaa86c', line: '#45230d', pink: '#f4a0a0' },
+      head: E(100, 86, 57, 46), body: E(100, 156, 40, 35),
+      earL: fill('M46 68 L48 10 L92 42 Z', B) + fill('M55 58 L56 26 L80 44 Z', K, false),
+      earR: fill(mirror('M46 68 L48 10 L92 42 Z'), B) + fill(mirror('M55 58 L56 26 L80 44 Z'), K, false),
+      headMarks: fill(E(100, 110, 27, 19), P, false) + fill(E(100, 46, 14, 10), P, false),
+      face: `<path d="M86 58 Q100 53 114 58 M89 65 Q100 61 111 65" fill="none" stroke="${P}" stroke-width="2.6"/>`,
+      bodyMarks: fill(E(100, 168, 20, 18), W, false) +
+        fill('M95 121 L105 121 L108 132 L104 146 L100 156 L96 146 L92 132 Z', P, false),
+      tail: tailStroke('M136 170 C 160 168, 174 150, 178 124', 7, B),
+      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'husky', name: 'ไซบีเรียน', label: 'ไซบีเรียน ฮัสกี้', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1.08, iris: '#58b4ff',
+      colors: { body: '#7f8fa6', patch: '#4f5d72', belly: '#ffffff', line: '#252c38', pink: '#ffb0c4' },
+      head: E(100, 86, 60, 46), body: BODY,
+      behindHead: fill(fluff(100, 120, 56, 24, 16, .1), W),
+      earL: fill('M52 62 L58 12 L94 42 Z', P) + fill('M61 53 L63 28 L82 44 Z', W, false),
+      earR: fill(mirror('M52 62 L58 12 L94 42 Z'), P) + fill(mirror('M61 53 L63 28 L82 44 Z'), W, false),
+      headMarks: fill('M38 102 C 52 80, 80 72, 92 72 L100 50 L108 72 C 120 72, 148 80, 162 102 L162 140 L38 140 Z', W, false) +
+        fill(E(79, 69, 5, 3.4), W, false) + fill(E(121, 69, 5, 3.4), W, false),
+      bodyMarks: fill(E(100, 166, 27, 25), W, false),
+      tail: tailStroke('M136 168 C 170 170, 184 140, 172 118 C 166 108, 172 100, 180 104', 16, B,
+        Object.assign(new String('M172 116 C 166 108, 172 100, 180 104'), { color: W })),
+      armL: W, armR: W, footL: W, footR: W, toe: '#9aa6b8',
+    },
+    {
+      key: 'chihuahua', name: 'ชิวาวา', label: 'ชิวาวา', sound: 'โฮ่ง', dream: 'กระดูก', scale: .82,
+      colors: { body: '#ebb677', patch: '#c98a45', belly: '#fff3e2', line: '#683f20', pink: '#ffa3b6' },
+      head: E(100, 88, 56, 46), body: E(100, 158, 38, 33),
+      earL: fill('M62 62 L14 6 L94 44 Z', B) + fill('M66 54 L30 20 L86 46 Z', K, false),
+      earR: fill(mirror('M62 62 L14 6 L94 44 Z'), B) + fill(mirror('M66 54 L30 20 L86 46 Z'), K, false),
+      headMarks: fill('M94 44 Q100 40 106 44 L114 92 Q100 98 86 92 Z', W, false) + fill(E(100, 112, 24, 17), W, false),
+      bodyMarks: fill(E(100, 160, 18, 26), W, false),
+      tail: tailStroke('M136 170 C 162 168, 172 146, 162 132 C 156 124, 162 118, 168 122', 7, B),
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'shihtzu', name: 'ชิสุ', label: 'ชิสุ', sound: 'โฮ่ง', dream: 'กระดูก', scale: .92, earsFront: true,
+      colors: { body: '#fffaf3', patch: '#d6a058', belly: '#ffffff', line: '#5d4027', pink: '#ffb3c6' },
+      head: fluff(100, 86, 57, 46, 20, .04), body: fluff(100, 160, 48, 32, 22, .07),
+      earL: fill('M62 48 C 36 48, 28 80, 32 104 C 34 124, 28 136, 38 146 C 46 152, 54 146, 56 138 C 62 146, 72 140, 70 128 C 76 110, 74 74, 62 48 Z', P),
+      earR: fill(mirror('M62 48 C 36 48, 28 80, 32 104 C 34 124, 28 136, 38 146 C 46 152, 54 146, 56 138 C 62 146, 72 140, 70 128 C 76 110, 74 74, 62 48 Z'), P),
+      headMarks: fill(E(76, 80, 20, 19), P, false) + fill(E(124, 80, 20, 19), P, false),
+      face: fill(fluff(100, 114, 30, 20, 14, .08), W, true, 2),
+      overHead: fill(fluff(100, 38, 14, 10, 10, .12), B, true, 2.4) +
+        `<path d="M100 30 L84 21 L84 39 Z M100 30 L116 21 L116 39 Z" fill="#ff5c9a" stroke="var(--cat-line)" stroke-width="2.2"/><circle cx="100" cy="30" r="4.5" fill="#ff86b4" stroke="var(--cat-line)" stroke-width="2"/>`,
+      bodyMarks: fill('M50 150 C 62 136, 80 146, 76 162 C 72 176, 54 174, 50 166 Z', P, false),
+      tail: tailStroke('M134 160 C 172 156, 180 116, 156 106 C 142 100, 134 114, 146 122', 16, P),
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'pom', name: 'ปอม', label: 'ปอมเมอเรเนียน', sound: 'โฮ่ง', dream: 'กระดูก', scale: .9,
+      colors: { body: '#f4a340', patch: '#df7e1d', belly: '#ffe4bc', line: '#6a3810', pink: '#ffa9b8' },
+      head: fluff(100, 86, 60, 49, 22, .06), body: fluff(100, 156, 48, 37, 22, .08),
+      behindHead: fill(fluff(100, 118, 68, 34, 22, .1), W),
+      earL: fill('M58 56 L66 22 L90 44 Z', P) + fill('M66 48 L69 32 L82 44 Z', K, false),
+      earR: fill(mirror('M58 56 L66 22 L90 44 Z'), P) + fill(mirror('M66 48 L69 32 L82 44 Z'), K, false),
+      headMarks: fill(E(100, 110, 32, 22), W, false) + fill(E(100, 44, 30, 13), P, false),
+      bodyMarks: fill(fluff(100, 168, 26, 22, 12, .08), W, false),
+      tail: tailStroke('M132 158 C 170 148, 178 110, 150 102 C 136 98, 132 116, 146 122', 22, P),
+      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
+    },
+  ];
+
+  let uid = 0;
+  function svg(p) {
+    const id = 'pet' + (uid++);
+    const eyeOpen = (cx) => p.iris
+      ? `<ellipse cx="${cx}" cy="86" rx="8.5" ry="10.5" fill="${p.iris}" stroke="var(--cat-line)" stroke-width="2"/><ellipse cx="${cx}" cy="87" rx="4.6" ry="6.2" fill="#14202e"/><circle cx="${cx + 3}" cy="81.5" r="3" fill="#fff"/><circle cx="${cx - 3}" cy="90" r="1.5" fill="#fff"/>`
+      : `<ellipse cx="${cx}" cy="86" rx="8.5" ry="10.5" fill="var(--cat-line)"/><circle cx="${cx + 3}" cy="81.5" r="3.4" fill="#fff"/><circle cx="${cx - 3}" cy="90" r="1.6" fill="#fff"/>`;
+    const nose = p.nose === 'cat'
+      ? `<path d="M95 98 Q100 95 105 98 Q100 104 95 98 Z" fill="var(--cat-pink)" stroke="var(--cat-line)" stroke-width="1.6"/>`
+      : `<path d="M91 95 Q100 91 109 95 Q108 103 100 105 Q92 103 91 95 Z" fill="#2a1d17" stroke="var(--cat-line)" stroke-width="1.4"/><ellipse cx="97" cy="96" rx="3" ry="1.6" fill="#fff" opacity=".7"/>`;
+    const ears = `<g class="ear-l">${p.earL}</g><g class="ear-r">${p.earR}</g>`;
+    return `<svg viewBox="0 0 200 200" aria-hidden="true">
+  <defs>
+    <clipPath id="${id}h"><path d="${p.head}"/></clipPath>
+    <clipPath id="${id}b"><path d="${p.body}"/></clipPath>
+    <path id="${id}star" d="M0.0 -11.0 L2.8 -3.9 L10.5 -3.4 L4.6 1.5 L6.5 8.9 L0.0 4.8 L-6.5 8.9 L-4.6 1.5 L-10.5 -3.4 L-2.8 -3.9Z"/>
+    <path id="${id}heart" d="M0 9 C -14 0, -12 -12, -5 -11 C -2 -11, 0 -8, 0 -6 C 0 -8, 2 -11, 5 -11 C 12 -12, 14 0, 0 9 Z"/>
+  </defs>
+  <g class="rig" stroke-linejoin="round" stroke-linecap="round">
+    <g class="tail">${p.tail}</g>
+    <g class="foot-l"><ellipse cx="78" cy="187" rx="15" ry="9" fill="${p.footL}" stroke="var(--cat-line)" stroke-width="3"/></g>
+    <g class="foot-r"><ellipse cx="122" cy="187" rx="15" ry="9" fill="${p.footR}" stroke="var(--cat-line)" stroke-width="3"/></g>
+    <g class="body-g">
+      <path d="${p.body}" fill="${B}"/>
+      <g clip-path="url(#${id}b)">${p.bodyMarks}</g>
+      <path d="${p.body}" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
+    </g>
+    <g class="head">
+      ${p.behindHead || ''}
+      ${p.earsFront ? '' : ears}
+      <path d="${p.head}" fill="${B}"/>
+      <g clip-path="url(#${id}h)">${p.headMarks}</g>
+      <path d="${p.head}" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
+      ${p.earsFront ? ears : ''}
+      ${p.overHead || ''}
+      <ellipse class="blush" cx="60" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
+      <ellipse class="blush" cx="140" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
+      <g class="eyes">
+        <g class="e-open"><g class="eyes-open"><g class="pupils">${eyeOpen(78)}${eyeOpen(122)}</g></g></g>
+        <g class="e-happy" fill="none" stroke="var(--cat-line)" stroke-width="4"><path d="M69 90 Q78 77 87 90"/><path d="M113 90 Q122 77 131 90"/></g>
+        <g class="e-half"><path d="M70 85 Q78 98 86 85 Z" fill="var(--cat-line)"/><path d="M114 85 Q122 98 130 85 Z" fill="var(--cat-line)"/><path d="M67 85 L89 85 M111 85 L133 85" stroke="var(--cat-line)" stroke-width="3.5"/></g>
+        <g class="e-flat"><path d="M70 87 Q78 96 86 87 Z" fill="var(--cat-line)"/><path d="M114 87 Q122 96 130 87 Z" fill="var(--cat-line)"/><path d="M68 86 L88 84 M112 84 L132 86" stroke="var(--cat-line)" stroke-width="3.5"/></g>
+        <g class="e-closed" fill="none" stroke="var(--cat-line)" stroke-width="3.5"><path d="M70 86 Q78 94 86 86"/><path d="M114 86 Q122 94 130 86"/></g>
+        <g class="e-star"><use href="#${id}star" x="78" y="86"/><use href="#${id}star" x="122" y="86"/></g>
+        <g class="e-heart"><use href="#${id}heart" x="78" y="87"/><use href="#${id}heart" x="122" y="87"/></g>
+        <g class="e-dizzy" fill="none" stroke="var(--cat-line)" stroke-width="2.6">
+          <path d="M78 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
+          <path d="M122 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
+        </g>
+      </g>
+      ${p.face || ''}
+      ${nose}
+      <circle class="nose-bubble" cx="109" cy="100" r="7" fill="rgba(190,230,255,.65)" stroke="rgba(120,180,230,.9)" stroke-width="1.2"/>
+      <g class="mouths" stroke="var(--cat-line)" stroke-width="2.6" fill="none">
+        <g class="m-smile"><path d="M85 106 Q100 132 115 106 Z" fill="var(--cat-mouth)"/><path d="M92 118 Q100 112 108 118 Q100 125 92 118 Z" fill="var(--cat-pink)" stroke="none"/><path d="M91 103 Q95.5 108 100 103 Q104.5 108 109 103"/></g>
+        <g class="m-grin"><path d="M80 105 Q100 140 120 105 Z" fill="var(--cat-mouth)"/><path d="M89 121 Q100 113 111 121 Q100 131 89 121 Z" fill="var(--cat-pink)" stroke="none"/><path d="M89 103 Q94.5 108 100 103 Q105.5 108 111 103"/></g>
+        <g class="m-w"><path d="M90 104 Q95 110 100 104 Q105 110 110 104"/></g>
+        <g class="m-o"><path d="M91 103 Q95.5 107 100 103 Q104.5 107 109 103"/><ellipse cx="100" cy="114" rx="6" ry="7" fill="var(--cat-mouth)"/></g>
+        <g class="m-yawn"><ellipse cx="100" cy="116" rx="11" ry="14" fill="var(--cat-mouth)"/><ellipse cx="100" cy="124" rx="7" ry="4.5" fill="var(--cat-pink)" stroke="none"/></g>
+        <g class="m-flat"><path d="M90 109 Q95 105 100 109 Q105 113 110 109"/></g>
+      </g>
+      ${p.whiskers ? `<g stroke="var(--cat-line)" stroke-width="2" opacity=".7"><path d="M46 96 L26 92 M46 102 L24 104"/><path d="M154 96 L174 92 M154 102 L176 104"/></g>` : ''}
+    </g>
+    <g class="arm-l"><rect x="66" y="128" width="17" height="42" rx="8.5" fill="${p.armL}" stroke="var(--cat-line)" stroke-width="3"/><path d="M71 165 L71 169 M78 165 L78 169" stroke="${p.toe}" stroke-width="2"/></g>
+    <g class="arm-r"><rect x="117" y="128" width="17" height="42" rx="8.5" fill="${p.armR}" stroke="var(--cat-line)" stroke-width="3"/><path d="M122 165 L122 169 M129 165 L129 169" stroke="${p.toe}" stroke-width="2"/></g>
+  </g>
+</svg>`;
+  }
+  function paint(el, p) {
+    el.style.setProperty('--cat-body', p.colors.body);
+    el.style.setProperty('--cat-patch', p.colors.patch);
+    el.style.setProperty('--cat-belly', p.colors.belly);
+    el.style.setProperty('--cat-line', p.colors.line);
+    el.style.setProperty('--cat-pink', p.colors.pink);
+  }
+  return { PETS, svg, paint };
+})();
+</script>
+<script>
 (() => {
   const stage = document.getElementById('stage');
   const floor = document.getElementById('floor');
   const catEl = document.getElementById('cat');
   const bubble = document.getElementById('bubble');
   const moodEl = document.getElementById('mood');
-  const pupils = catEl.querySelector('.pupils');
+  const flipEl = catEl.querySelector('.flip');
+  const pickerEl = document.getElementById('picker');
+  let pupils = null;
+  let pet = PetArt.PETS[0];
 
   // idle thresholds (ms since the last time someone played with the cat)
   const T_BORED = 12000, T_SLEEPY = 22000, T_SLEEP = 32000;
@@ -651,9 +741,9 @@
   let W = 0, H = 0, size = 200, floorTop = 0, floorBottom = 0;
   function layout() {
     W = stage.clientWidth; H = stage.clientHeight;
-    size = Math.round(Math.max(130, Math.min(230, W * 0.36, H * 0.32)));
+    size = Math.round(Math.max(130, Math.min(230, W * 0.36, H * 0.32)) * pet.scale);
     floorTop = Math.round(H * 0.58);
-    floorBottom = H - Math.max(18, H * 0.04);
+    floorBottom = H - Math.max(18, H * 0.04) - pickerEl.offsetHeight;
     floor.style.setProperty('--floor-top-px', floorTop + 'px');
     floor.style.top = floorTop + 'px';
     catEl.style.setProperty('--size', size + 'px');
@@ -675,7 +765,7 @@
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
   // ---------- presentation helpers ----------
-  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land'];
+  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof'];
   const MINI_CLASSES = ['look', 'groom', 'twitch', 'tailflick', 'sigh', 'yawn', 'stir'];
   const ACTION_CLASSES = ['a-wave', 'a-jump', 'a-excited', 'a-spin', 'a-love', 'a-dance', 'a-flip', 'a-peek', 'a-boo', 'a-giggle', 'a-pounce', 'a-zoom'];
 
@@ -695,7 +785,7 @@
 
   let sayTimer = null;
   function say(text, ms = 1800) {
-    bubble.textContent = text;
+    bubble.textContent = text.replaceAll('เหมียว', pet.sound).replaceAll('ปลาทู', pet.dream);
     bubble.classList.add('show');
     clearTimeout(sayTimer);
     sayTimer = setTimeout(() => bubble.classList.remove('show'), ms);
@@ -1152,6 +1242,44 @@
 
     requestAnimationFrame(frame);
   }
+
+  // ---------- choosing a pet ----------
+  function mountPet(p) {
+    pet = p;
+    PetArt.paint(catEl, p);
+    flipEl.innerHTML = PetArt.svg(p);
+    pupils = flipEl.querySelector('.pupils');
+    catEl.setAttribute('aria-label', p.label + ' แตะเพื่อเล่นด้วย');
+    pickerEl.querySelectorAll('.pet-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.key === p.key)));
+    try { localStorage.setItem('pet', p.key); } catch (e) {}
+  }
+  function switchPet(p) {
+    if (p === pet || cat.mode === 'drag' || cat.mode === 'falling') return;
+    clearTimers(); stopWalking(); hush();
+    cat.mode = 'action';
+    setClasses(['poof']);
+    burst(['✦', '✧', '☁'], 10, GOLDS.concat(['#ffffff']));
+    later(() => { mountPet(p); layout(); }, 240);
+    later(() => { cat.lastPoke = performance.now(); doAction('wave'); say(pick([`สวัสดี! เราคือ${p.name}~`, `${p.name}มาแล้วจ้า!`, `หวัดดี~ ${p.sound}!`]), 2000); }, 520);
+  }
+  PetArt.PETS.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pet-btn'; b.dataset.key = p.key;
+    b.setAttribute('aria-label', p.label);
+    const t = document.createElement('div');
+    t.className = 'thumb'; t.dataset.eyes = 'happy'; t.dataset.mouth = 'smile';
+    PetArt.paint(t, p);
+    t.innerHTML = PetArt.svg(p);
+    const n = document.createElement('span'); n.textContent = p.name;
+    b.append(t, n);
+    b.addEventListener('click', e => { e.stopPropagation(); switchPet(p); });
+    pickerEl.appendChild(b);
+  });
+  pickerEl.addEventListener('click', e => e.stopPropagation());
+  pickerEl.addEventListener('pointerdown', e => e.stopPropagation());
+  let saved = null;
+  try { saved = localStorage.getItem('pet'); } catch (e) {}
+  mountPet(PetArt.PETS.find(p => p.key === saved) || PetArt.PETS[0]);
 
   window.addEventListener('resize', layout);
   layout();
