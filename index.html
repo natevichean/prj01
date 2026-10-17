@@ -1,0 +1,1947 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>สัตว์เลี้ยงขี้เล่น</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky-top: #ffc9df;
+    --sky-mid: #f1dcff;
+    --sky-bottom: #fff4fa;
+    --floor-top: #fdeaf5;
+    --floor-bottom: #efe2ff;
+    --floor-line: rgba(200, 150, 220, .25);
+    --path: #e6d8fd;
+    --ink: #7a3e6b;
+    --ink-soft: #a26b96;
+    --chip-bg: rgba(255, 255, 255, .86);
+    --chip-border: #ffb8d6;
+    --bubble-bg: #ffffff;
+    --bubble-ink: #7a3e6b;
+    --cloud: rgba(255, 255, 255, .92);
+    --shadow: rgba(150, 90, 160, .2);
+
+    --cat-body: #8fd0f7;
+    --cat-patch: #2f70b9;
+    --cat-belly: #eaf7ff;
+    --cat-line: #1d3d61;
+    --cat-pink: #ff9cbc;
+    --cat-mouth: #7b2846;
+    --cat-blush: #ff8fb0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky-top: #3a2456;
+      --sky-mid: #2c2350;
+      --sky-bottom: #3b2a5c;
+      --floor-top: #4a3468;
+      --floor-bottom: #35285a;
+      --floor-line: rgba(255, 255, 255, .06);
+      --path: #5a4680;
+      --ink: #ffe3f3;
+      --ink-soft: #e0b6d6;
+      --chip-bg: rgba(60, 40, 90, .82);
+      --chip-border: rgba(255, 170, 210, .35);
+      --cloud: rgba(255, 220, 240, .16);
+      --shadow: rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky-top: #3a2456;
+    --sky-mid: #2c2350;
+    --sky-bottom: #3b2a5c;
+    --floor-top: #4a3468;
+    --floor-bottom: #35285a;
+    --floor-line: rgba(255, 255, 255, .06);
+    --path: #5a4680;
+    --ink: #ffe3f3;
+    --ink-soft: #e0b6d6;
+    --chip-bg: rgba(60, 40, 90, .82);
+    --chip-border: rgba(255, 170, 210, .35);
+    --cloud: rgba(255, 220, 240, .16);
+    --shadow: rgba(0, 0, 0, .35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--sky-bottom);
+    color: var(--ink);
+    font-family: "Mali", "Mitr", "Prompt", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #stage {
+    position: fixed; inset: 0;
+    background: linear-gradient(var(--sky-top), var(--sky-mid) 30%, var(--sky-bottom) 58%);
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #floor {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    top: var(--floor-top-px, 58%);
+    background: linear-gradient(var(--floor-top), var(--floor-bottom));
+  }
+  #floor svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #backdrop { position: absolute; left: 0; right: 0; width: 100%; pointer-events: none; }
+  .sprinkle {
+    position: absolute; top: -20px; width: 6px; height: 14px; border-radius: 4px; pointer-events: none; opacity: .85;
+    animation: sprinkleFall linear infinite;
+  }
+  @keyframes sprinkleFall {
+    from { transform: translate(0, 0) rotate(0); }
+    to { transform: translate(var(--sx, 40px), var(--sy, 60vh)) rotate(540deg); opacity: 0; }
+  }
+  .cloud {
+    position: absolute; background: var(--cloud); border-radius: 999px;
+    filter: blur(.3px);
+    animation: drift linear infinite;
+  }
+  .cloud::before, .cloud::after {
+    content: ""; position: absolute; background: inherit; border-radius: 50%;
+  }
+  .cloud::before { width: 55%; height: 160%; left: 14%; bottom: 20%; }
+  .cloud::after { width: 40%; height: 130%; right: 12%; bottom: 25%; }
+  @keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(130vw); } }
+
+  #hud {
+    position: absolute; top: 16px; left: 16px; right: 16px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
+    pointer-events: none; z-index: 5;
+  }
+  .chip {
+    background: var(--chip-bg);
+    border: 2px solid var(--chip-border);
+    box-shadow: 0 3px 0 rgba(230, 140, 190, .25);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 15px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  #mood { font-weight: 600; transition: transform .2s; }
+  #mood.pop { transform: scale(1.12); }
+  #hint { color: var(--ink-soft); font-size: 13px; }
+
+  .hud-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #belly { display: flex; align-items: center; gap: 8px; padding: 7px 12px; }
+  .meter { width: 72px; height: 10px; border-radius: 99px; background: rgba(127, 140, 160, .25); overflow: hidden; }
+  #bellyFill { height: 100%; width: 60%; border-radius: 99px; background: linear-gradient(90deg, #ff9a4d, #ffcf4d); transition: width .4s, background .4s; }
+  #belly.hungry #bellyFill { background: linear-gradient(90deg, #ff5c6c, #ff9a4d); }
+  #belly.hungry { animation: hungryPulse 1.2s ease-in-out infinite; }
+  @keyframes hungryPulse { 50% { transform: scale(1.06); } }
+  #foods {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    background: var(--chip-bg); border: 2px solid var(--chip-border); border-radius: 999px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 5; cursor: default; white-space: nowrap;
+    max-width: calc(100% - 32px); overflow-x: auto; scrollbar-width: none;
+  }
+  .foods-label { font-size: 13px; color: var(--ink-soft); padding: 0 4px 0 6px; }
+  .food-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: linear-gradient(#fff, #ffeaf4); box-shadow: 0 2px 0 rgba(230, 140, 190, .35); font-size: 22px; line-height: 1; cursor: pointer;
+    transition: transform .15s;
+  }
+  .food-btn[aria-pressed="true"] { background: rgba(255, 143, 192, .3); box-shadow: 0 0 0 2px #ff8fc0 inset; }
+  .bar-sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--chip-border); }
+  .toy {
+    position: absolute; left: 0; top: 0; z-index: 3;
+    width: 40px; height: 40px; font-size: 34px; line-height: 40px; text-align: center;
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+    animation: toyIn .35s cubic-bezier(.3, 1.6, .5, 1);
+  }
+  .toy:active { cursor: grabbing; }
+  .toy > span { display: inline-block; transition: transform .1s; }
+  .toy.squeak > span { transform: scale(1.25, .7); }
+  .toy-shadow { position: absolute; left: 0; top: 0; width: 34px; height: 9px; border-radius: 50%; background: var(--shadow); z-index: 1; pointer-events: none; }
+  @keyframes toyIn { from { opacity: 0; } to { opacity: 1; } }
+  .toy.gone, .toy-shadow.gone, .feather.gone { transition: opacity .35s; opacity: 0; }
+  .feather { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; font-size: 42px; line-height: 1; }
+  .feather > span { display: inline-block; transform-origin: 20% 90%; animation: featherWiggle .5s ease-in-out infinite alternate; }
+  @keyframes featherWiggle { from { transform: rotate(-18deg); } to { transform: rotate(14deg); } }
+  #stage.wand { cursor: none; }
+  .cat.kick .jumper { animation: kickHop .5s ease-out; }
+  .cat.kick .arm-r { animation: swipe .5s ease-out; }
+  .cat.kick .foot-r { animation: kickFoot .5s ease-out; }
+  @keyframes kickHop { 0% { transform: none; } 30% { transform: translateY(-12%) rotate(-6deg); } 60% { transform: scale(1.08, .92); } 100% { transform: none; } }
+  @keyframes swipe { 0% { transform: none; } 35% { transform: rotate(-125deg); } 70% { transform: rotate(-40deg); } 100% { transform: none; } }
+  @keyframes kickFoot { 40% { transform: translate(6px, -10px) rotate(-20deg); } }
+  .cat.hug .arm-l { transform: rotate(-42deg); }
+  .cat.hug .arm-r { transform: rotate(42deg); }
+  .cat.hug .jumper { animation: lovePulse .4s ease-in-out 2; }
+  .food-btn:hover { transform: translateY(-2px) scale(1.08); }
+  .food-btn:active { transform: scale(.9); }
+  .bowl {
+    position: absolute; left: 0; top: 0; width: 76px; height: 56px; pointer-events: none; z-index: 3;
+    transform-origin: 50% 100%;
+    animation: bowlDrop .5s cubic-bezier(.3, 1.4, .5, 1);
+  }
+  .bowl .food { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); font-size: 34px; transition: transform .25s, opacity .25s; }
+  .bowl svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 34px; overflow: visible; }
+  .bowl.gone { animation: bowlGone .5s ease-in forwards; }
+  @keyframes bowlDrop { from { transform: var(--pos) translateY(-120px) scale(.6); opacity: 0; } to { transform: var(--pos); opacity: 1; } }
+  @keyframes bowlGone { to { transform: var(--pos) scale(.4); opacity: 0; } }
+  .cat.eat .head { animation: munch .34s ease-in-out infinite alternate; }
+  .cat.eat .tail { animation-duration: .45s; }
+  .cat.eat .jumper { transform: translateY(2%) scale(1.03, .97); }
+  @keyframes munch { from { transform: rotate(6deg) translateY(8px); } to { transform: rotate(2deg) translateY(16px); } }
+  .cat.full .rig { animation: fullBelly 1s ease-in-out infinite alternate; }
+  .cat.full .arm-l { transform: rotate(-38deg); }
+  .cat.full .arm-r { transform: rotate(38deg); }
+  .cat.full .head { transform: rotate(-6deg); }
+  @keyframes fullBelly { from { transform: scale(1); } to { transform: scale(1.05, 1.02); } }
+  .cat.nope .head { animation: nope .3s ease-in-out 4; }
+  @keyframes nope { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+
+  #picker {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    display: flex; gap: 6px; padding: 6px;
+    overflow-x: auto; scrollbar-width: none;
+    background: var(--chip-bg); border: 2px solid var(--chip-border); border-radius: 22px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 5; cursor: default;
+  }
+  #picker::-webkit-scrollbar { display: none; }
+  .pet-btn {
+    flex: 0 0 auto; width: 64px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 4px 2px 6px; border: 2px solid transparent; border-radius: 16px;
+    background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
+    transition: transform .15s, background .15s, border-color .15s;
+  }
+  .pet-btn:hover { transform: translateY(-2px); background: rgba(127, 170, 220, .14); }
+  .pet-btn[aria-pressed="true"] { border-color: #ff8fc0; background: rgba(255, 143, 192, .18); font-weight: 700; }
+  .pet-btn .thumb { width: 44px; height: 44px; }
+  .pet-btn .thumb svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .pet-btn .thumb .tail, .pet-btn .thumb .eyes-open, .pet-btn .thumb .e-star, .pet-btn .thumb .e-heart { animation: none; }
+  .cat.poof .jumper { animation: poof .5s ease-in-out; }
+  @keyframes poof { 0% { transform: scale(1); } 45% { transform: scale(.05) rotate(20deg); opacity: .2; } 55% { transform: scale(.05) rotate(-20deg); opacity: .2; } 100% { transform: scale(1); } }
+
+  /* ---------- cat ---------- */
+  .cat {
+    position: absolute; left: 0; top: 0;
+    width: var(--size); height: var(--size);
+    transform-origin: 50% 100%;
+    will-change: transform;
+    z-index: 2;
+    outline: none;
+  }
+  .shadow {
+    position: absolute; left: 22%; right: 22%; bottom: 1%; height: 8%;
+    background: var(--shadow); border-radius: 50%;
+    transition: transform .3s;
+  }
+  .jumper {
+    position: absolute; inset: 0;
+    transform-origin: 50% 96%;
+    transition: transform .35s ease;
+  }
+  .flip {
+    position: absolute; inset: 0;
+    transform: scaleX(var(--face, 1));
+    transition: transform .22s ease;
+  }
+  .cat svg { width: 100%; height: 100%; overflow: visible; display: block; }
+
+  .bubble {
+    position: absolute; left: 50%; bottom: 100%;
+    transform: translate(-50%, 6px) scale(.6);
+    opacity: 0;
+    background: var(--bubble-bg); color: var(--bubble-ink);
+    padding: 8px 14px; border-radius: 18px;
+    font-size: 18px; font-weight: 600; white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(36, 73, 111, .18);
+    transition: opacity .2s, transform .25s cubic-bezier(.3, 1.6, .5, 1);
+    pointer-events: none;
+  }
+  .bubble::after {
+    content: ""; position: absolute; left: 50%; top: 100%;
+    margin-left: -8px; border: 8px solid transparent; border-top-color: var(--bubble-bg);
+  }
+  .bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+  /* svg parts: transform origins in viewBox units */
+  .rig, .tail, .head, .ear-l, .ear-r, .arm-l, .arm-r, .foot-l, .foot-r, .eyes-open, .nose-bubble, .body-g {
+    transition: transform .3s ease;
+  }
+  .rig { transform-origin: 100px 196px; }
+  .body-g { transform-origin: 100px 190px; }
+  .tail { transform-origin: 136px 172px; animation: tailWag 1.4s ease-in-out infinite; }
+  .head { transform-origin: 100px 128px; }
+  .ear-l { transform-origin: 66px 52px; }
+  .ear-r { transform-origin: 134px 52px; }
+  .arm-l { transform-origin: 74px 136px; }
+  .arm-r { transform-origin: 126px 136px; }
+  .foot-l { transform-origin: 78px 190px; }
+  .foot-r { transform-origin: 122px 190px; }
+  .eyes-open { transform-origin: 100px 86px; animation: blink 4.4s infinite; }
+  .nose-bubble { transform-origin: 104px 101px; transform: scale(0); }
+
+  .eyes > g, .mouths > g { display: none; }
+  [data-eyes="open"]   .e-open,
+  [data-eyes="happy"]  .e-happy,
+  [data-eyes="half"]   .e-half,
+  [data-eyes="flat"]   .e-flat,
+  [data-eyes="closed"] .e-closed,
+  [data-eyes="star"]   .e-star,
+  [data-eyes="heart"]  .e-heart,
+  [data-eyes="dizzy"]  .e-dizzy,
+  [data-eyes="wide"]   .e-open { display: inline; }
+  [data-eyes="wide"] .eyes-open { animation: none; transform: scale(1.18); }
+
+  [data-mouth="smile"] .m-smile,
+  [data-mouth="grin"]  .m-grin,
+  [data-mouth="w"]     .m-w,
+  [data-mouth="o"]     .m-o,
+  [data-mouth="yawn"]  .m-yawn,
+  [data-mouth="flat"]  .m-flat { display: inline; }
+
+  .blush { transition: opacity .3s; opacity: .55; }
+  .cat:hover .blush, .cat.blushy .blush { opacity: .95; }
+  .e-star use { fill: #ffd34d; stroke: var(--cat-line); stroke-width: 1.6; stroke-linejoin: round; }
+  .e-star { animation: twinkle .5s ease-in-out infinite alternate; transform-origin: 100px 86px; }
+  .e-heart use { fill: #ff4f8b; stroke: var(--cat-line); stroke-width: 1.4; }
+  .e-heart { animation: heartBeat .6s ease-in-out infinite; transform-origin: 100px 86px; }
+
+  @keyframes tailWag { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(14deg); } }
+  @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
+  @keyframes twinkle { from { transform: scale(.92) rotate(-6deg); } to { transform: scale(1.12) rotate(6deg); } }
+  @keyframes heartBeat { 0%,100% { transform: scale(1); } 30% { transform: scale(1.18); } 60% { transform: scale(.96); } }
+
+  /* ----- walking ----- */
+  .cat.walk .foot-l { animation: step var(--step, .42s) ease-in-out infinite; }
+  .cat.walk .foot-r { animation: step var(--step, .42s) ease-in-out infinite calc(var(--step, .42s) / -2); }
+  .cat.walk .arm-l  { animation: swingL var(--step, .42s) ease-in-out infinite; }
+  .cat.walk .arm-r  { animation: swingR var(--step, .42s) ease-in-out infinite; }
+  .cat.walk .rig    { animation: bob calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
+  .cat.walk .head   { animation: headSway calc(var(--step, .42s) * 2) ease-in-out infinite; }
+  .cat.walk .tail   { animation-duration: .7s; }
+  .cat.run { --step: .2s; }
+  .cat.slow { --step: .8s; }
+  @keyframes step { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px) rotate(-6deg); } }
+  @keyframes swingL { 0%,100% { transform: rotate(14deg); } 50% { transform: rotate(-10deg); } }
+  @keyframes swingR { 0%,100% { transform: rotate(14deg); } 50% { transform: rotate(-10deg); } }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+  @keyframes headSway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+
+  /* ----- idle mini behaviours ----- */
+  .cat.look .head { animation: lookAround 1.8s ease-in-out; }
+  @keyframes lookAround { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-10deg) translateX(-4px); } 70% { transform: rotate(10deg) translateX(4px); } }
+
+  .cat.groom .arm-r { animation: lick .32s ease-in-out infinite alternate; }
+  .cat.groom .head  { transform: rotate(6deg); }
+  @keyframes lick { from { transform: rotate(128deg); } to { transform: rotate(140deg) translateY(-3px); } }
+
+  .cat.twitch .ear-l { animation: earTwitchL .5s ease-in-out 2; }
+  .cat.twitch .ear-r { animation: earTwitchR .5s ease-in-out 1 .2s; }
+  @keyframes earTwitchL { 50% { transform: rotate(-16deg); } }
+  @keyframes earTwitchR { 50% { transform: rotate(16deg); } }
+
+  .cat.tailflick .tail { animation: tailFlick .5s ease-in-out 3; }
+  @keyframes tailFlick { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(28deg); } }
+
+  /* ----- bored ----- */
+  .cat.bored .jumper { transform: translateY(3%) scale(1.02, .96); }
+  .cat.bored .head { transform: rotate(-9deg) translateY(4px); }
+  .cat.bored .tail { animation-duration: 3.4s; }
+  .cat.bored .ear-l { transform: rotate(-10deg); }
+  .cat.bored .ear-r { transform: rotate(10deg); }
+  .cat.sigh .rig { animation: sigh 1.6s ease-in-out; }
+  @keyframes sigh { 0%,100% { transform: scale(1); } 35% { transform: scale(1.04, 1.06); } 70% { transform: scale(1.03, .94); } }
+
+  /* ----- sleepy ----- */
+  .cat.sleepy .jumper { transform: translateY(4%) scale(1.03, .95); }
+  .cat.sleepy .head { animation: nod 3.2s ease-in-out infinite; }
+  .cat.sleepy .ear-l { transform: rotate(-14deg); }
+  .cat.sleepy .ear-r { transform: rotate(14deg); }
+  .cat.sleepy .tail { animation-duration: 4s; }
+  @keyframes nod {
+    0%, 50% { transform: rotate(0) translateY(0); }
+    78% { transform: rotate(9deg) translateY(9px); }
+    82% { transform: rotate(-3deg) translateY(-2px); }
+    100% { transform: rotate(0) translateY(0); }
+  }
+  .cat.yawn .head { animation: yawnHead 1.8s ease-in-out; }
+  .cat.yawn .arm-l { animation: stretchL 1.8s ease-in-out; }
+  .cat.yawn .arm-r { animation: stretchR 1.8s ease-in-out; }
+  .cat.yawn .rig { animation: stretchBody 1.8s ease-in-out; }
+  @keyframes yawnHead { 0%,100% { transform: none; } 30%,75% { transform: rotate(-4deg) translateY(-6px); } }
+  @keyframes stretchL { 0%,100% { transform: rotate(0); } 30%,75% { transform: rotate(165deg); } }
+  @keyframes stretchR { 0%,100% { transform: rotate(0); } 30%,75% { transform: rotate(-165deg); } }
+  @keyframes stretchBody { 0%,100% { transform: none; } 30%,75% { transform: scale(.97, 1.07); } }
+
+  /* ----- asleep ----- */
+  .cat.sleep .jumper { transform: translateY(9%) scale(1.1, .84); }
+  .cat.sleep .rig { animation: breathe 2.8s ease-in-out infinite; }
+  .cat.sleep .head { transform: rotate(10deg) translateY(16px); }
+  .cat.sleep .arm-l { transform: rotate(-62deg) translateY(4px); }
+  .cat.sleep .arm-r { transform: rotate(62deg) translateY(4px); }
+  .cat.sleep .ear-l { transform: rotate(-22deg); }
+  .cat.sleep .ear-r { transform: rotate(18deg); }
+  .cat.sleep .tail { animation: none; transform: rotate(58deg); }
+  .cat.sleep .nose-bubble { animation: snot 2.8s ease-in-out infinite; }
+  .cat.sleep .shadow { transform: scaleX(1.25); }
+  @keyframes breathe { 0%,100% { transform: scale(1, 1); } 50% { transform: scale(1.025, 1.045); } }
+  @keyframes snot { 0%,100% { transform: scale(.25); } 50% { transform: scale(1.15); } }
+  .cat.sleep.stir .ear-l { animation: earTwitchL .4s ease-in-out 2; }
+  .cat.sleep.stir .head { transform: rotate(4deg) translateY(12px); }
+
+  /* ----- groggy wake ----- */
+  .cat.groggy .jumper { animation: wobble 1.2s ease-in-out infinite; }
+  .cat.groggy.rub .arm-r { animation: rub .45s ease-in-out infinite alternate; }
+  .cat.groggy.rub .head { transform: rotate(5deg) translateY(4px); }
+  .cat.groggy.stretch .arm-l { transform: rotate(165deg); }
+  .cat.groggy.stretch .arm-r { transform: rotate(-165deg); }
+  .cat.groggy.stretch .rig { transform: scale(.96, 1.08); }
+  .cat.groggy.stretch .head { transform: rotate(-5deg) translateY(-6px); }
+  @keyframes wobble { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @keyframes rub { from { transform: translateY(-12px) rotate(168deg); } to { transform: translateY(-14px) rotate(182deg); } }
+
+  /* ----- click actions ----- */
+  .cat.a-wave .arm-r { animation: wave .42s ease-in-out infinite alternate; }
+  .cat.a-wave .head { transform: rotate(-7deg); }
+  .cat.a-wave .tail { animation-duration: .5s; }
+  @keyframes wave { from { transform: translateX(6px) rotate(-100deg); } to { transform: translateX(6px) rotate(-145deg); } }
+
+  .cat.a-jump .jumper { animation: jump 1s cubic-bezier(.3, .7, .4, 1); }
+  .cat.a-jump .shadow { animation: shadowJump 1s cubic-bezier(.3, .7, .4, 1); }
+  .cat.a-jump .arm-l { animation: armsUpL 1s ease-in-out; }
+  .cat.a-jump .arm-r { animation: armsUpR 1s ease-in-out; }
+  .cat.a-jump .foot-l, .cat.a-jump .foot-r { animation: tuck 1s ease-in-out; }
+  @keyframes jump {
+    0% { transform: translateY(0) scale(1, 1); }
+    16% { transform: translateY(0) scale(1.16, .8); }
+    38% { transform: translateY(-62%) scale(.9, 1.12); }
+    56% { transform: translateY(-70%) scale(1, 1); }
+    80% { transform: translateY(0) scale(1.16, .84); }
+    90% { transform: translateY(-5%) scale(.97, 1.04); }
+    100% { transform: translateY(0) scale(1, 1); }
+  }
+  @keyframes shadowJump { 0%,100% { transform: scale(1); opacity: 1; } 56% { transform: scale(.5); opacity: .5; } }
+  @keyframes armsUpL { 0%,100% { transform: rotate(0); } 35%,65% { transform: rotate(150deg); } }
+  @keyframes armsUpR { 0%,100% { transform: rotate(0); } 35%,65% { transform: rotate(-150deg); } }
+  @keyframes tuck { 0%,100% { transform: none; } 40%,60% { transform: translateY(-6px); } }
+
+  .cat.a-excited .jumper { animation: hop .3s ease-out infinite alternate; }
+  .cat.a-excited .arm-l { animation: cheerL .3s ease-in-out infinite alternate; }
+  .cat.a-excited .arm-r { animation: cheerR .3s ease-in-out infinite alternate; }
+  .cat.a-excited .tail { animation-duration: .3s; }
+  .cat.a-excited .ear-l { transform: rotate(8deg); }
+  .cat.a-excited .ear-r { transform: rotate(-8deg); }
+  @keyframes hop { from { transform: translateY(0) scale(1.06, .94); } to { transform: translateY(-16%) scale(.96, 1.05); } }
+  @keyframes cheerL { from { transform: rotate(135deg); } to { transform: rotate(165deg); } }
+  @keyframes cheerR { from { transform: rotate(-135deg); } to { transform: rotate(-165deg); } }
+
+  .cat.a-spin .jumper { animation: spin 1s ease-in-out; }
+  .cat.a-spin .arm-l { transform: rotate(110deg); }
+  .cat.a-spin .arm-r { transform: rotate(-110deg); }
+  @keyframes spin {
+    0% { transform: translateY(0) scaleX(1); }
+    12% { transform: translateY(-14%) scaleX(-1); }
+    25% { transform: translateY(-20%) scaleX(1); }
+    37% { transform: translateY(-20%) scaleX(-1); }
+    50% { transform: translateY(-20%) scaleX(1); }
+    62% { transform: translateY(-20%) scaleX(-1); }
+    75% { transform: translateY(-14%) scaleX(1); }
+    88% { transform: translateY(0) scale(1.1, .9); }
+    100% { transform: translateY(0) scale(1, 1); }
+  }
+  .cat.dizzy .head { animation: dizzyHead .5s ease-in-out infinite alternate; }
+  .cat.dizzy .jumper { animation: wobble .6s ease-in-out infinite; }
+  @keyframes dizzyHead { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+
+  .cat.a-love .jumper { animation: lovePulse .8s ease-in-out infinite; }
+  .cat.a-love .arm-l { transform: rotate(-28deg); }
+  .cat.a-love .arm-r { transform: rotate(28deg); }
+  .cat.a-love .head { animation: headSway 1.6s ease-in-out infinite; }
+  .cat.a-love .blush { opacity: 1; }
+  @keyframes lovePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05, .97); } }
+
+  .cat.a-dance .jumper { animation: dance .5s ease-in-out infinite alternate; }
+  .cat.a-dance .arm-l { animation: danceL 1s ease-in-out infinite; }
+  .cat.a-dance .arm-r { animation: danceR 1s ease-in-out infinite; }
+  .cat.a-dance .head { animation: danceHead .5s ease-in-out infinite alternate; }
+  .cat.a-dance .tail { animation-duration: .5s; }
+  @keyframes dance { from { transform: rotate(-9deg) translateX(-5%) translateY(0); } to { transform: rotate(9deg) translateX(5%) translateY(-5%); } }
+  @keyframes danceL { 0%,100% { transform: rotate(150deg); } 50% { transform: rotate(20deg); } }
+  @keyframes danceR { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(-150deg); } }
+  @keyframes danceHead { from { transform: rotate(7deg); } to { transform: rotate(-7deg); } }
+
+  .cat.a-flip .jumper { animation: backflip 1.1s cubic-bezier(.35, .6, .4, 1); transform-origin: 50% 60%; }
+  .cat.a-flip .shadow { animation: shadowJump 1.1s ease-in-out; }
+  .cat.a-flip .arm-l { transform: rotate(60deg); }
+  .cat.a-flip .arm-r { transform: rotate(-60deg); }
+  @keyframes backflip {
+    0% { transform: translateY(0) rotate(0) scale(1, 1); }
+    15% { transform: translateY(0) rotate(0) scale(1.15, .82); }
+    35% { transform: translateY(-60%) rotate(-90deg); }
+    55% { transform: translateY(-70%) rotate(-270deg); }
+    78% { transform: translateY(0) rotate(-360deg) scale(1.14, .86); }
+    100% { transform: translateY(0) rotate(-360deg) scale(1, 1); }
+  }
+
+  .cat.a-peek .arm-l { transform: translateY(-14px) rotate(-175deg); }
+  .cat.a-peek .arm-r { transform: translateY(-14px) rotate(175deg); }
+  .cat.a-peek .head { transform: translateY(3px); }
+  .cat.a-peek .jumper { animation: wobble .8s ease-in-out infinite; }
+  .cat.a-boo .arm-l { transform: rotate(125deg); }
+  .cat.a-boo .arm-r { transform: rotate(-125deg); }
+  .cat.a-boo .jumper { animation: boo .5s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes boo { 0% { transform: scale(.9); } 50% { transform: translateY(-10%) scale(1.12); } 100% { transform: scale(1); } }
+
+  .cat.a-giggle .jumper { animation: giggle .12s linear infinite alternate; }
+  .cat.a-giggle .arm-l { transform: rotate(-30deg); }
+  .cat.a-giggle .arm-r { transform: rotate(30deg); }
+  .cat.a-giggle .blush { opacity: 1; }
+  @keyframes giggle { from { transform: translateX(-1.5%) rotate(-2deg); } to { transform: translateX(1.5%) rotate(2deg); } }
+
+  .cat.a-pounce .jumper { animation: pounce 1.2s ease-in-out; }
+  .cat.a-pounce .tail { animation: tailFlick .2s ease-in-out 3; }
+  .cat.a-pounce .arm-l { animation: pounceArmL 1.2s ease-in-out; }
+  .cat.a-pounce .arm-r { animation: pounceArmR 1.2s ease-in-out; }
+  @keyframes pounce {
+    0% { transform: none; }
+    10%, 45% { transform: translateY(6%) scale(1.1, .82); }
+    20% { transform: translateY(6%) scale(1.1, .82) translateX(-2%); }
+    30% { transform: translateY(6%) scale(1.1, .82) translateX(2%); }
+    62% { transform: translateY(-34%) rotate(10deg) scale(.95, 1.08); }
+    82% { transform: translateY(2%) scale(1.15, .86); }
+    100% { transform: none; }
+  }
+  @keyframes pounceArmL { 0%, 50% { transform: none; } 62%, 75% { transform: rotate(140deg); } 100% { transform: none; } }
+  @keyframes pounceArmR { 0%, 50% { transform: none; } 62%, 75% { transform: rotate(-140deg); } 100% { transform: none; } }
+
+  .cat.a-zoom .tail { animation-duration: .25s; }
+  .cat.a-zoom .ear-l { transform: rotate(-20deg); }
+  .cat.a-zoom .ear-r { transform: rotate(-12deg); }
+  .cat.a-zoom .flip { transform: scaleX(var(--face, 1)) skewX(calc(var(--face, 1) * -8deg)); }
+
+  /* ----- dragging ----- */
+  .cat { cursor: grab; touch-action: none; }
+  .cat.dragged { cursor: grabbing; z-index: 4; }
+  .cat.dragged .jumper { transform: rotate(var(--tilt, 0deg)); transform-origin: 50% 25%; transition: transform .08s linear; }
+  .cat.dragged .shadow { opacity: 0; }
+  .cat.dragged .foot-l { animation: dangle .32s ease-in-out infinite alternate; }
+  .cat.dragged .foot-r { animation: dangle .32s ease-in-out infinite alternate-reverse; }
+  .cat.dragged .arm-l { animation: flailL .26s ease-in-out infinite alternate; }
+  .cat.dragged .arm-r { animation: flailR .26s ease-in-out infinite alternate; }
+  .cat.dragged .tail { animation: tailWag .4s ease-in-out infinite; }
+  .cat.dragged .rig { transform: scale(.94, 1.08); }
+  .cat.dragged .ear-l { transform: rotate(-12deg); }
+  .cat.dragged .ear-r { transform: rotate(12deg); }
+  @keyframes dangle { from { transform: translateY(4px) rotate(-10deg); } to { transform: translateY(10px) rotate(10deg); } }
+  @keyframes flailL { from { transform: rotate(110deg); } to { transform: rotate(150deg); } }
+  @keyframes flailR { from { transform: rotate(-110deg); } to { transform: rotate(-150deg); } }
+  .cat.falling .arm-l { transform: rotate(150deg); }
+  .cat.falling .arm-r { transform: rotate(-150deg); }
+  .cat.falling .shadow { opacity: 0; }
+  .cat.falling .rig { transform: scale(.94, 1.08); }
+  .cat.land .jumper { animation: land .55s cubic-bezier(.3, 1.5, .5, 1); }
+  @keyframes land { 0% { transform: scale(1.25, .7); } 50% { transform: scale(.92, 1.08) translateY(-4%); } 100% { transform: none; } }
+
+  /* ----- effects ----- */
+  .fx {
+    position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3;
+    font-weight: 700; line-height: 1;
+    animation: floatUp var(--dur, 1.6s) ease-out forwards;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+    15% { opacity: 1; transform: translate(calc(-50% + var(--dx) * .25), calc(-50% + var(--dy) * .2)) scale(1.15) rotate(0); }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.9) rotate(var(--rot)); }
+  }
+  .fx.fall { animation-name: fall; animation-timing-function: cubic-bezier(.2, .6, .6, 1); }
+  @keyframes fall {
+    0% { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
+    25% { transform: translate(calc(-50% + var(--dx) * .5), calc(-50% - 60px)) rotate(calc(var(--rot) * .3)); }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)); }
+  }
+  .fx.dust {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(200, 170, 130, .55);
+  }
+  .fx.zzz { color: #7d8fd6; font-family: "Comic Sans MS", "Chalkboard SE", cursive; }
+
+  @media (max-width: 520px) {
+    .chip { font-size: 13px; padding: 7px 12px; }
+    #hint { font-size: 12px; }
+    .bubble { font-size: 15px; }
+    #hint { display: none; }
+    .foods-label { display: none; }
+    .food-btn { width: 32px; height: 32px; font-size: 18px; }
+    #foods { gap: 4px; padding: 4px 6px; }
+    .meter { width: 56px; }
+    .pet-btn { width: 56px; font-size: 11px; }
+    .pet-btn .thumb { width: 38px; height: 38px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cloud { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage" aria-label="เวทีแมว">
+  <div class="cloud" style="top:9%;width:120px;height:34px;animation-duration:70s;animation-delay:-20s"></div>
+  <div class="cloud" style="top:22%;width:80px;height:24px;animation-duration:95s;animation-delay:-60s"></div>
+  <div class="cloud" style="top:33%;width:150px;height:40px;animation-duration:120s;animation-delay:-5s"></div>
+  <svg id="backdrop" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="mtA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdb8f2"/><stop offset="1" stop-color="#efe4ff"/></linearGradient>
+    <linearGradient id="mtB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9cdf5"/><stop offset="1" stop-color="#e8efff"/></linearGradient>
+    <linearGradient id="waffle" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0b46a"/><stop offset="1" stop-color="#d98a3e"/></linearGradient>
+    <pattern id="grid" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 L0 14 M0 0 L14 0" stroke="#b86f2c" stroke-width="2" opacity=".55"/></pattern>
+  </defs>
+  <!-- mountains -->
+  <path d="M140 420 L360 190 L560 420Z" fill="url(#mtB)"/>
+  <path d="M420 420 L640 110 L870 420Z" fill="url(#mtA)"/>
+  <path d="M780 420 L1000 170 L1220 420Z" fill="url(#mtB)"/>
+  <path d="M598 170 L640 110 L684 172 L664 164 L646 186 L628 162 L612 178Z" fill="#fff"/>
+  <path d="M330 222 L360 190 L392 224 L374 218 L360 234 L346 216Z" fill="#fff"/>
+  <path d="M968 206 L1000 170 L1034 208 L1016 200 L1000 218 L984 200Z" fill="#fff"/>
+  <!-- cotton candy hills -->
+  <path d="M0 372 Q120 330 250 362 T520 352 T800 360 T1060 346 T1200 352 L1200 420 L0 420Z" fill="#fde0ef"/>
+  <path d="M0 396 Q160 372 330 392 T700 388 T1200 384 L1200 420 L0 420Z" fill="#f9d2e8"/>
+
+  <!-- teal ice-cream trees -->
+  <g transform="translate(70 420)">
+    <rect x="-7" y="-60" width="14" height="60" rx="6" fill="#c98a4a"/>
+    <path d="M-46 -60 Q0 -190 46 -60 Q0 -40 -46 -60Z" fill="#5fd3c4" stroke="#2f9c90" stroke-width="4"/>
+    <circle cx="-14" cy="-100" r="7" fill="#3b6fd1"/><circle cx="16" cy="-122" r="6" fill="#3b6fd1"/><circle cx="20" cy="-82" r="7" fill="#3b6fd1"/><circle cx="-6" cy="-140" r="5" fill="#3b6fd1"/>
+  </g>
+  <g transform="translate(1140 420) scale(.9)">
+    <rect x="-7" y="-60" width="14" height="60" rx="6" fill="#c98a4a"/>
+    <path d="M-46 -60 Q0 -190 46 -60 Q0 -40 -46 -60Z" fill="#ffa6c9" stroke="#e46f9d" stroke-width="4"/>
+    <circle cx="-14" cy="-100" r="7" fill="#fff"/><circle cx="16" cy="-122" r="6" fill="#ffe066"/><circle cx="20" cy="-82" r="7" fill="#fff"/>
+  </g>
+
+  <!-- lollipops -->
+  <g transform="translate(250 420)">
+    <rect x="-4" y="-130" width="8" height="130" rx="4" fill="#fff" stroke="#e6c9dd" stroke-width="2"/>
+    <circle cx="0" cy="-150" r="40" fill="#b07cf0" stroke="#7d4cc4" stroke-width="5"/>
+    <path d="M0 -150 m-3 0 a3 3 0 1 1 6 0 a9 9 0 1 1 -18 0 a15 15 0 1 1 30 0 a21 21 0 1 1 -42 0 a27 27 0 1 1 54 0" fill="none" stroke="#e7d6ff" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="-14" cy="-166" r="7" fill="#fff" opacity=".6"/>
+  </g>
+  <g transform="translate(965 420) scale(.85)">
+    <rect x="-4" y="-130" width="8" height="130" rx="4" fill="#fff" stroke="#e6c9dd" stroke-width="2"/>
+    <circle cx="0" cy="-150" r="40" fill="#ff7fb0" stroke="#d94c86" stroke-width="5"/>
+    <path d="M0 -150 m-3 0 a3 3 0 1 1 6 0 a9 9 0 1 1 -18 0 a15 15 0 1 1 30 0 a21 21 0 1 1 -42 0 a27 27 0 1 1 54 0" fill="none" stroke="#ffe0ec" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="-14" cy="-166" r="7" fill="#fff" opacity=".6"/>
+  </g>
+
+  <!-- ice-cream house -->
+  <g transform="translate(450 420)">
+    <path d="M-72 0 L-62 -170 Q0 -186 62 -170 L72 0Z" fill="#ffd27f" stroke="#c98a3a" stroke-width="5"/>
+    <path d="M-60 -120 L-40 -120 M-58 -80 L-34 -80 M40 -100 L62 -100 M36 -50 L64 -50" stroke="#e8b062" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-22 -96 Q0 -132 22 -96 L22 -56 L-22 -56Z" fill="#9fdcef" stroke="#b5651d" stroke-width="5"/>
+    <path d="M0 -118 L0 -56 M-22 -80 L22 -80" stroke="#b5651d" stroke-width="4"/>
+    <path d="M-16 0 L-16 -30 Q0 -48 16 -30 L16 0Z" fill="#ef8f52" stroke="#b5651d" stroke-width="4"/>
+    <circle cx="9" cy="-16" r="2.5" fill="#7a3b10"/>
+    <ellipse cx="0" cy="-196" rx="94" ry="62" fill="#fff6e8" stroke="#e7c79c" stroke-width="5"/>
+    <path d="M-92 -186 Q-80 -146 -66 -170 Q-56 -126 -40 -164 Q-26 -136 -12 -166 Q4 -112 18 -164 Q32 -140 46 -168 Q60 -132 72 -170 Q84 -150 92 -186 Q0 -150 -92 -186Z" fill="#ff9cc4" stroke="#e46f9d" stroke-width="4" stroke-linejoin="round"/>
+    <g stroke-linecap="round" stroke-width="6">
+      <path d="M-50 -226 L-42 -232" stroke="#5cc8ff"/><path d="M-12 -244 L-4 -238" stroke="#ffd34d"/><path d="M30 -232 L38 -238" stroke="#8be38b"/><path d="M58 -212 L64 -204" stroke="#ff6fa5"/><path d="M-70 -204 L-64 -198" stroke="#b28cff"/>
+    </g>
+    <path d="M-30 -200 Q-22 -192 -14 -200 M14 -200 Q22 -192 30 -200" fill="none" stroke="#7a4a2a" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="-36" cy="-188" rx="9" ry="5" fill="#ffb0c8"/><ellipse cx="36" cy="-188" rx="9" ry="5" fill="#ffb0c8"/>
+    <circle cx="0" cy="-262" r="13" fill="#ff4f6d" stroke="#c22c4a" stroke-width="4"/><path d="M0 -274 Q8 -294 22 -296" fill="none" stroke="#5a8f3a" stroke-width="4"/>
+  </g>
+
+  <!-- ice-cream cone tower -->
+  <g transform="translate(760 420)">
+    <path d="M-44 -150 L0 0 L44 -150Z" fill="url(#waffle)" stroke="#b86f2c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-44 -150 L0 0 L44 -150Z" fill="url(#grid)"/>
+    <circle cx="-22" cy="-172" r="34" fill="#ffb3d0" stroke="#e46f9d" stroke-width="4"/>
+    <circle cx="22" cy="-176" r="36" fill="#c9f1df" stroke="#64bf98" stroke-width="4"/>
+    <circle cx="0" cy="-214" r="40" fill="#fff3df" stroke="#e7c79c" stroke-width="4"/>
+    <path d="M-38 -206 Q-30 -180 -22 -198 Q-12 -170 0 -196 Q10 -176 22 -198 Q32 -184 38 -206" fill="none" stroke="#e7c79c" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-8 -228 Q0 -222 8 -228" fill="none" stroke="#7a4a2a" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="-14" cy="-232" r="3.5" fill="#7a4a2a"/><circle cx="14" cy="-232" r="3.5" fill="#7a4a2a"/>
+    <path d="M0 -254 L-6 -268 L6 -268Z" fill="#ffe066" stroke="#d1a520" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+
+  <!-- cupcake + candy cane + gumdrops -->
+  <g transform="translate(610 420)">
+    <path d="M-24 0 L-30 -34 L30 -34 L24 0Z" fill="#7fc8ff" stroke="#4a8ed1" stroke-width="3"/>
+    <path d="M-34 -34 Q-30 -66 0 -70 Q30 -66 34 -34Z" fill="#ffc2dc" stroke="#e46f9d" stroke-width="3"/>
+    <circle cx="0" cy="-74" r="7" fill="#ff4f6d"/>
+  </g>
+  <g transform="translate(870 420)">
+    <path d="M0 0 L0 -70 Q0 -96 22 -96 Q44 -96 44 -74" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round"/>
+    <path d="M0 0 L0 -70 Q0 -96 22 -96 Q44 -96 44 -74" fill="none" stroke="#ff5c7a" stroke-width="13" stroke-linecap="round" stroke-dasharray="10 12"/>
+  </g>
+  <g>
+    <path d="M330 420 Q330 396 346 396 Q362 396 362 420Z" fill="#8be3c0"/>
+    <path d="M680 420 Q680 400 694 400 Q708 400 708 420Z" fill="#ffd34d"/>
+    <path d="M1040 420 Q1040 398 1056 398 Q1072 398 1072 420Z" fill="#b28cff"/>
+    <path d="M150 420 Q150 400 164 400 Q178 400 178 420Z" fill="#ff8fb7"/>
+  </g>
+</svg>
+
+  <div id="floor"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M40 0 L56 0 C 64 22, 84 38, 70 62 C 60 80, 62 92, 66 100 L34 100 C 26 86, 30 70, 44 58 C 60 42, 42 24, 40 0Z" fill="var(--path)"/>
+    <g fill="#fff" opacity=".7"><ellipse cx="50" cy="12" rx="1.6" ry="1"/><ellipse cx="62" cy="34" rx="1.6" ry="1"/><ellipse cx="60" cy="58" rx="1.6" ry="1"/><ellipse cx="48" cy="80" rx="1.6" ry="1"/></g>
+  </svg></div>
+
+  <div id="hud">
+    <div class="hud-left">
+      <div id="mood" class="chip">😸 ร่าเริง</div>
+      <div id="belly" class="chip" title="ความอิ่ม"><span>🍽️</span><div class="meter"><div id="bellyFill"></div></div></div>
+    </div>
+    <div id="hint" class="chip">แตะน้องเพื่อเล่น · กดค้างลากไปมาได้ · แตะพื้นเพื่อเรียก</div>
+  </div>
+
+  <div id="foods" role="toolbar" aria-label="ให้อาหารและของเล่น"><span class="foods-label">ให้อาหาร</span></div>
+  <div id="picker" role="toolbar" aria-label="เลือกสัตว์เลี้ยง"></div>
+
+  <div id="cat" class="cat" role="button" tabindex="0" aria-label="สัตว์เลี้ยง แตะเพื่อเล่นด้วย" data-eyes="open" data-mouth="smile">
+    <div class="shadow"></div>
+    <div class="jumper">
+      <div class="flip">
+      </div>
+    </div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+</div>
+
+<script>
+// ---------- pet designs: every pet shares the same rig (head, ears, arms, feet, tail) so all animations work ----------
+const PetArt = (() => {
+  const E = (cx, cy, rx, ry) => `M${cx - rx} ${cy} a${rx} ${ry} 0 1 0 ${2 * rx} 0 a${rx} ${ry} 0 1 0 ${-2 * rx} 0Z`;
+  // scalloped "fluffy" outline around an ellipse
+  function fluff(cx, cy, rx, ry, n, amp) {
+    const pt = (a, k) => [(cx + Math.cos(a) * rx * k).toFixed(1), (cy + Math.sin(a) * ry * k).toFixed(1)];
+    let d = `M${pt(0, 1).join(' ')}`;
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
+      const c = pt((a0 + a1) / 2, 1 + amp * 2), p = pt(a1, 1);
+      d += ` Q${c.join(' ')} ${p.join(' ')}`;
+    }
+    return d + 'Z';
+  }
+  // mirror absolute "x y" pairs across the face centre
+  const mirror = d => d.replace(/(-?\d+\.?\d*)[ ,](-?\d+\.?\d*)/g, (m, x, y) => `${(200 - x).toFixed(1).replace(/\.0$/, '')} ${y}`);
+  const fill = (d, f, stroke = true, w = 3) => `<path d="${d}" fill="${f}"${stroke ? ` stroke="var(--cat-line)" stroke-width="${w}"` : ''}/>`;
+  const tailStroke = (d, w, color, tip) =>
+    `<path d="${d}" fill="none" stroke="var(--cat-line)" stroke-width="${w + 6}"/><path d="${d}" fill="none" stroke="${color}" stroke-width="${w}"/>` +
+    (tip ? `<path d="${tip}" fill="none" stroke="${tip.color || 'var(--cat-belly)'}" stroke-width="${w}"/>` : '');
+  const pair = (d, f, stroke) => fill(d, f, stroke) + fill(mirror(d), f, stroke);
+
+  const B = 'var(--cat-body)', P = 'var(--cat-patch)', W = 'var(--cat-belly)', K = 'var(--cat-pink)';
+  const HEAD = E(100, 87, 62, 46), BODY = E(100, 156, 44, 35);
+
+  const PETS = [
+    {
+      key: 'cat', shirt: '#ff8fc0', name: 'ลายวัว', label: 'แมวลายวัวสีฟ้า', sound: 'เหมียว', dream: 'ปลาทู', fav: ['fish', 'milk'], scale: 1, nose: 'cat', whiskers: true,
+      colors: { body: '#8fd0f7', patch: '#2f70b9', belly: '#eaf7ff', line: '#1d3d61', pink: '#ff9cbc' },
+      head: HEAD, body: BODY,
+      earL: fill('M54 62 Q52 26 66 22 Q78 22 92 44 Z', P) + fill('M60 52 Q60 34 67 31 Q74 32 82 44 Z', K, false),
+      earR: fill('M146 62 Q148 26 134 22 Q122 22 108 44 Z', B) + fill('M140 52 Q140 34 133 31 Q126 32 118 44 Z', K, false),
+      headMarks: fill('M40 60 C 52 40, 82 44, 88 64 C 94 84, 84 104, 66 104 C 50 104, 38 88, 40 60 Z', P, false) +
+        fill('M130 38 C 142 32, 162 40, 160 58 C 158 70, 142 72, 134 62 C 126 54, 124 42, 130 38 Z', P, false) +
+        fill(E(100, 112, 30, 20), W, false),
+      bodyMarks: fill('M52 140 C 66 128, 82 136, 80 152 C 78 166, 60 170, 52 162 Z', P, false) +
+        fill('M124 166 C 132 154, 150 156, 150 170 C 150 186, 128 192, 122 182 Z', P, false) + fill(E(100, 168, 22, 20), W, false),
+      tail: tailStroke('M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113', 9, B) +
+        `<path d="M172 132 C 170 118, 177 107, 186 113" fill="none" stroke="${P}" stroke-width="9"/>`,
+      armL: B, armR: P, footL: W, footR: P, toe: '#cfe6ff',
+    },
+    {
+      key: 'orange', shirt: '#4fa3ff', name: 'แมวส้ม', label: 'แมวส้ม', sound: 'เหมียว', dream: 'ปลาทู', fav: ['fish', 'milk'], nose: 'cat', whiskers: true, scale: 1,
+      colors: { body: '#f7a650', patch: '#d8741f', belly: '#fff2df', line: '#6b3510', pink: '#ffa3b3' },
+      head: HEAD, body: BODY,
+      earL: fill('M54 62 Q52 26 66 22 Q78 22 92 44 Z', B) + fill('M60 52 Q60 34 67 31 Q74 32 82 44 Z', K, false),
+      earR: fill(mirror('M54 62 Q52 26 66 22 Q78 22 92 44 Z'), B) + fill(mirror('M60 52 Q60 34 67 31 Q74 32 82 44 Z'), K, false),
+      headMarks: `<path d="M92 46 L94 62 M100 42 L100 61 M108 46 L106 62" fill="none" stroke="${P}" stroke-width="5"/>` +
+        `<path d="M42 82 L58 87 M42 93 L56 95 M158 82 L142 87 M158 93 L144 95" fill="none" stroke="${P}" stroke-width="4.5"/>` +
+        fill(E(100, 112, 30, 20), W, false),
+      bodyMarks: fill(E(100, 168, 22, 20), W, false) +
+        `<path d="M58 134 Q68 140 64 152 M54 152 Q64 158 60 170 M142 134 Q132 140 136 152 M146 152 Q136 158 140 170" fill="none" stroke="${P}" stroke-width="5"/>`,
+      tail: tailStroke('M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113', 9, B) + `<path d="M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113" fill="none" stroke="${P}" stroke-width="9" stroke-dasharray="6 9"/>`,
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'salid', shirt: '#ff7ad9', name: 'แมวสลิด', label: 'แมวสลิด', sound: 'เหมียว', dream: 'ปลาทู', fav: ['fish', 'milk'], nose: 'cat', whiskers: true, scale: 1, iris: '#a6d35c',
+      colors: { body: '#a0968a', patch: '#4d443b', belly: '#f1ebe1', line: '#2c2620', pink: '#ffa9b6' },
+      head: HEAD, body: BODY,
+      earL: fill('M54 62 Q52 26 66 22 Q78 22 92 44 Z', B) + fill('M60 52 Q60 34 67 31 Q74 32 82 44 Z', K, false),
+      earR: fill(mirror('M54 62 Q52 26 66 22 Q78 22 92 44 Z'), B) + fill(mirror('M60 52 Q60 34 67 31 Q74 32 82 44 Z'), K, false),
+      headMarks: `<path d="M92 46 L94 62 M100 42 L100 61 M108 46 L106 62" fill="none" stroke="${P}" stroke-width="5"/>` +
+        `<path d="M42 82 L58 87 M42 93 L56 95 M158 82 L142 87 M158 93 L144 95" fill="none" stroke="${P}" stroke-width="4.5"/>` +
+        fill(E(100, 112, 30, 20), W, false) + `<path d="M60 64 Q68 70 66 78 M140 64 Q132 70 134 78" fill="none" stroke="${P}" stroke-width="4"/>`,
+      bodyMarks: fill(E(100, 168, 22, 20), W, false) +
+        `<path d="M58 134 Q68 140 64 152 M54 152 Q64 158 60 170 M142 134 Q132 140 136 152 M146 152 Q136 158 140 170" fill="none" stroke="${P}" stroke-width="5"/>` + `<path d="M74 126 Q80 134 76 142 M126 126 Q120 134 124 142" fill="none" stroke="${P}" stroke-width="5"/>`,
+      tail: tailStroke('M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113', 9, B) + `<path d="M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113" fill="none" stroke="${P}" stroke-width="9" stroke-dasharray="5 7"/>`,
+      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'calico', shirt: '#ffcf3f', name: 'สามสี', label: 'แมวสามสี', sound: 'เหมียว', dream: 'ปลาทู', fav: ['fish', 'milk'], nose: 'cat', whiskers: true, scale: 1,
+      colors: { body: '#fffaf4', patch: '#f19a3e', belly: '#ffffff', line: '#4a3426', pink: '#ffa9b8' },
+      head: HEAD, body: BODY,
+      earL: fill('M54 62 Q52 26 66 22 Q78 22 92 44 Z', P) + fill('M60 52 Q60 34 67 31 Q74 32 82 44 Z', K, false),
+      earR: fill(mirror('M54 62 Q52 26 66 22 Q78 22 92 44 Z'), '#3b3431') + fill(mirror('M60 52 Q60 34 67 31 Q74 32 82 44 Z'), K, false),
+      headMarks: fill('M40 62 C 50 40, 82 42, 88 60 C 92 76, 80 90, 64 88 C 50 86, 38 78, 40 62 Z', P, false) +
+        fill('M118 40 C 132 30, 160 38, 160 60 C 160 74, 140 78, 128 68 C 118 60, 112 48, 118 40 Z', '#3b3431', false),
+      bodyMarks: fill('M52 140 C 66 126, 84 136, 80 152 C 76 168, 58 170, 52 160 Z', P, false) +
+        fill('M122 160 C 128 146, 150 148, 150 164 C 150 182, 128 188, 122 176 Z', '#3b3431', false) +
+        fill('M90 126 C 98 120, 112 124, 110 134 C 108 142, 94 142, 90 136 Z', P, false),
+      tail: tailStroke('M136 172 C 168 176, 184 152, 174 126 C 170 115, 178 106, 186 113', 9, P) + `<path d="M174 126 C 170 115, 178 106, 186 113" fill="none" stroke="#3b3431" stroke-width="9"/>`,
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'bangkaew', shirt: '#6fd3a0', name: 'บางแก้ว', label: 'หมาบางแก้ว', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1,
+      colors: { body: '#fffaf2', patch: '#d99a55', belly: '#ffffff', line: '#5b3b22', pink: '#ffb3c1' },
+      head: HEAD, body: fluff(100, 156, 45, 35, 18, .05),
+      behindHead: fill(fluff(100, 122, 64, 28, 18, .1), B),
+      earL: fill('M56 60 L64 20 L92 44 Z', P) + fill('M64 52 L67 32 L82 45 Z', K, false),
+      earR: fill(mirror('M56 60 L64 20 L92 44 Z'), P) + fill(mirror('M64 52 L67 32 L82 45 Z'), K, false),
+      headMarks: pair('M36 72 C 42 40, 80 34, 92 50 C 94 64, 86 76, 72 78 C 58 80, 40 88, 36 72 Z', P, false) + fill(E(100, 110, 28, 19), W, false),
+      bodyMarks: fill('M50 146 C 60 132, 78 140, 74 156 C 70 170, 54 168, 50 160 Z', P, false) + fill(E(100, 168, 22, 20), W, false),
+      tail: tailStroke('M134 162 C 172 160, 180 118, 158 106 C 144 98, 134 112, 146 122', 18, B) +
+        `<path d="M160 108 C 150 104, 140 110, 146 122" fill="none" stroke="${P}" stroke-width="10"/>`,
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'husky', shirt: '#ff6b7a', name: 'ไซบีเรียน', label: 'ไซบีเรียน ฮัสกี้', sound: 'โฮ่ง', dream: 'กระดูก', scale: 1.08, iris: '#58b4ff',
+      colors: { body: '#7f8fa6', patch: '#4f5d72', belly: '#ffffff', line: '#252c38', pink: '#ffb0c4' },
+      head: E(100, 86, 60, 46), body: BODY,
+      behindHead: fill(fluff(100, 120, 56, 24, 16, .1), W),
+      earL: fill('M52 62 L58 12 L94 42 Z', P) + fill('M61 53 L63 28 L82 44 Z', W, false),
+      earR: fill(mirror('M52 62 L58 12 L94 42 Z'), P) + fill(mirror('M61 53 L63 28 L82 44 Z'), W, false),
+      headMarks: fill('M38 102 C 52 80, 80 72, 92 72 L100 50 L108 72 C 120 72, 148 80, 162 102 L162 140 L38 140 Z', W, false) +
+        fill(E(79, 69, 5, 3.4), W, false) + fill(E(121, 69, 5, 3.4), W, false),
+      bodyMarks: fill(E(100, 166, 27, 25), W, false),
+      tail: tailStroke('M136 168 C 170 170, 184 140, 172 118 C 166 108, 172 100, 180 104', 16, B,
+        Object.assign(new String('M172 116 C 166 108, 172 100, 180 104'), { color: W })),
+      armL: W, armR: W, footL: W, footR: W, toe: '#9aa6b8',
+    },
+    {
+      key: 'chihuahua', shirt: '#b28cff', name: 'ชิวาวา', label: 'ชิวาวา', sound: 'โฮ่ง', dream: 'กระดูก', scale: .82,
+      colors: { body: '#ebb677', patch: '#c98a45', belly: '#fff3e2', line: '#683f20', pink: '#ffa3b6' },
+      head: E(100, 88, 56, 46), body: E(100, 158, 38, 33),
+      earL: fill('M62 62 L14 6 L94 44 Z', B) + fill('M66 54 L30 20 L86 46 Z', K, false),
+      earR: fill(mirror('M62 62 L14 6 L94 44 Z'), B) + fill(mirror('M66 54 L30 20 L86 46 Z'), K, false),
+      headMarks: fill('M94 44 Q100 40 106 44 L114 92 Q100 98 86 92 Z', W, false) + fill(E(100, 112, 24, 17), W, false),
+      bodyMarks: fill(E(100, 160, 18, 26), W, false),
+      tail: tailStroke('M136 170 C 162 168, 172 146, 162 132 C 156 124, 162 118, 168 122', 7, B),
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'shihtzu', shirt: '#ffb0d0', name: 'ชิสุ', label: 'ชิสุ', sound: 'โฮ่ง', dream: 'กระดูก', scale: .92, earsFront: true,
+      colors: { body: '#fffaf3', patch: '#d6a058', belly: '#ffffff', line: '#5d4027', pink: '#ffb3c6' },
+      head: fluff(100, 86, 57, 46, 20, .04), body: fluff(100, 160, 48, 32, 22, .07),
+      earL: fill('M62 48 C 36 48, 28 80, 32 104 C 34 124, 28 136, 38 146 C 46 152, 54 146, 56 138 C 62 146, 72 140, 70 128 C 76 110, 74 74, 62 48 Z', P),
+      earR: fill(mirror('M62 48 C 36 48, 28 80, 32 104 C 34 124, 28 136, 38 146 C 46 152, 54 146, 56 138 C 62 146, 72 140, 70 128 C 76 110, 74 74, 62 48 Z'), P),
+      headMarks: fill(E(76, 80, 20, 19), P, false) + fill(E(124, 80, 20, 19), P, false),
+      face: fill(fluff(100, 114, 30, 20, 14, .08), W, true, 2),
+      overHead: fill(fluff(100, 38, 14, 10, 10, .12), B, true, 2.4) +
+        `<path d="M100 30 L84 21 L84 39 Z M100 30 L116 21 L116 39 Z" fill="#ff5c9a" stroke="var(--cat-line)" stroke-width="2.2"/><circle cx="100" cy="30" r="4.5" fill="#ff86b4" stroke="var(--cat-line)" stroke-width="2"/>`,
+      bodyMarks: fill('M50 150 C 62 136, 80 146, 76 162 C 72 176, 54 174, 50 166 Z', P, false),
+      tail: tailStroke('M134 160 C 172 156, 180 116, 156 106 C 142 100, 134 114, 146 122', 16, P),
+      armL: B, armR: B, footL: W, footR: W, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'pom', shirt: '#62c3ff', name: 'ปอม', label: 'ปอมเมอเรเนียน', sound: 'โฮ่ง', dream: 'กระดูก', scale: .9,
+      colors: { body: '#f4a340', patch: '#df7e1d', belly: '#ffe4bc', line: '#6a3810', pink: '#ffa9b8' },
+      head: fluff(100, 86, 60, 49, 22, .06), body: fluff(100, 156, 48, 37, 22, .08),
+      behindHead: fill(fluff(100, 118, 68, 34, 22, .1), W),
+      earL: fill('M58 56 L66 22 L90 44 Z', P) + fill('M66 48 L69 32 L82 44 Z', K, false),
+      earR: fill(mirror('M58 56 L66 22 L90 44 Z'), P) + fill(mirror('M66 48 L69 32 L82 44 Z'), K, false),
+      headMarks: fill(E(100, 110, 32, 22), W, false) + fill(E(100, 44, 30, 13), P, false),
+      bodyMarks: fill(fluff(100, 168, 26, 22, 12, .08), W, false),
+      tail: tailStroke('M132 158 C 170 148, 178 110, 150 102 C 136 98, 132 116, 146 122', 22, P),
+      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
+    },
+    {
+      key: 'golden', shirt: '#ff9a4d', name: 'โกลเด้น', label: 'โกลเด้นรีทรีฟเวอร์', sound: 'โฮ่ง', dream: 'ลูกบอล', scale: 1.06, earsFront: true,
+      colors: { body: '#eab35e', patch: '#c98633', belly: '#fbe2b4', line: '#5e3712', pink: '#ffa8b4' },
+      head: E(100, 86, 56, 46), body: fluff(100, 156, 44, 35, 20, .05),
+      behindHead: fill(fluff(100, 122, 56, 22, 16, .1), W),
+      earL: fill('M64 46 C 44 42, 34 62, 34 86 C 34 104, 30 118, 40 124 C 48 128, 56 122, 60 114 C 68 104, 72 70, 64 46 Z', P),
+      earR: fill(mirror('M64 46 C 44 42, 34 62, 34 86 C 34 104, 30 118, 40 124 C 48 128, 56 122, 60 114 C 68 104, 72 70, 64 46 Z'), P),
+      headMarks: fill(E(100, 111, 28, 19), W, false) + fill(E(100, 44, 22, 10), P, false),
+      bodyMarks: fill(fluff(100, 166, 24, 24, 12, .08), W, false),
+      tail: tailStroke('M136 168 C 166 170, 182 150, 184 124', 14, B) +
+        `<path d="M150 170 L156 182 M162 166 L170 178 M172 156 L182 166 M178 144 L190 150" stroke="${B}" stroke-width="6"/>`,
+      armL: B, armR: B, footL: B, footR: B, toe: 'var(--cat-line)',
+    },
+  ];
+
+  let uid = 0;
+  function svg(p) {
+    const id = 'pet' + (uid++);
+    // big round kawaii eyes: light iris ring, dark pupil, two glints
+    const eyeOpen = (cx) =>
+      `<circle cx="${cx}" cy="86" r="11" fill="#fff" stroke="var(--cat-line)" stroke-width="2.6"/>` +
+      `<circle cx="${cx}" cy="86.5" r="8" fill="${p.iris || '#8fc6ee'}"/>` +
+      `<circle cx="${cx}" cy="87" r="5" fill="#1d2633"/>` +
+      `<circle cx="${cx + 3}" cy="82.5" r="3" fill="#fff"/><circle cx="${cx - 3.2}" cy="90.5" r="1.5" fill="#fff"/>`;
+    const shirt = p.shirt || '#ff8fc0';
+    const star = 'M100 139 L102.6 144.6 L108.6 145.2 L104 149.2 L105.4 155 L100 152 L94.6 155 L96 149.2 L91.4 145.2 L97.4 144.6Z';
+    const nose = p.nose === 'cat'
+      ? `<path d="M95 98 Q100 95 105 98 Q100 104 95 98 Z" fill="var(--cat-pink)" stroke="var(--cat-line)" stroke-width="1.6"/>`
+      : `<path d="M91 95 Q100 91 109 95 Q108 103 100 105 Q92 103 91 95 Z" fill="#2a1d17" stroke="var(--cat-line)" stroke-width="1.4"/><ellipse cx="97" cy="96" rx="3" ry="1.6" fill="#fff" opacity=".7"/>`;
+    const ears = `<g class="ear-l">${p.earL}</g><g class="ear-r">${p.earR}</g>`;
+    return `<svg viewBox="0 0 200 200" aria-hidden="true">
+  <defs>
+    <clipPath id="${id}h"><path d="${p.head}"/></clipPath>
+    <clipPath id="${id}b"><path d="${p.body}"/></clipPath>
+    <path id="${id}star" d="M0.0 -11.0 L2.8 -3.9 L10.5 -3.4 L4.6 1.5 L6.5 8.9 L0.0 4.8 L-6.5 8.9 L-4.6 1.5 L-10.5 -3.4 L-2.8 -3.9Z"/>
+    <path id="${id}heart" d="M0 9 C -14 0, -12 -12, -5 -11 C -2 -11, 0 -8, 0 -6 C 0 -8, 2 -11, 5 -11 C 12 -12, 14 0, 0 9 Z"/>
+  </defs>
+  <g class="rig" stroke-linejoin="round" stroke-linecap="round">
+    <g class="tail">${p.tail}</g>
+    <g class="foot-l"><ellipse cx="78" cy="187" rx="15" ry="9" fill="${p.footL}" stroke="var(--cat-line)" stroke-width="3"/></g>
+    <g class="foot-r"><ellipse cx="122" cy="187" rx="15" ry="9" fill="${p.footR}" stroke="var(--cat-line)" stroke-width="3"/></g>
+    <g class="body-g">
+      <path d="${p.body}" fill="${B}"/>
+      <g clip-path="url(#${id}b)">${p.bodyMarks}
+        <path d="M40 122 L160 122 L160 170 Q100 178 40 170 Z" fill="${shirt}"/>
+        <path d="M40 170 Q100 178 160 170" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="3"/>
+        <path d="${star}" fill="#fff" opacity=".9"/>
+      </g>
+      <path d="${p.body}" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
+    </g>
+    <g class="head">
+      ${p.behindHead || ''}
+      ${p.earsFront ? '' : ears}
+      <path d="${p.head}" fill="${B}"/>
+      <g clip-path="url(#${id}h)">${p.headMarks}</g>
+      <path d="${p.head}" fill="none" stroke="var(--cat-line)" stroke-width="3"/>
+      ${p.earsFront ? ears : ''}
+      ${p.overHead || ''}
+      <ellipse class="blush" cx="60" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
+      <ellipse class="blush" cx="140" cy="104" rx="10" ry="6" fill="var(--cat-blush)"/>
+      <g class="eyes">
+        <g class="e-open"><g class="eyes-open"><g class="pupils">${eyeOpen(78)}${eyeOpen(122)}</g></g></g>
+        <g class="e-happy" fill="none" stroke="var(--cat-line)" stroke-width="4"><path d="M69 90 Q78 77 87 90"/><path d="M113 90 Q122 77 131 90"/></g>
+        <g class="e-half"><path d="M70 85 Q78 98 86 85 Z" fill="var(--cat-line)"/><path d="M114 85 Q122 98 130 85 Z" fill="var(--cat-line)"/><path d="M67 85 L89 85 M111 85 L133 85" stroke="var(--cat-line)" stroke-width="3.5"/></g>
+        <g class="e-flat"><path d="M70 87 Q78 96 86 87 Z" fill="var(--cat-line)"/><path d="M114 87 Q122 96 130 87 Z" fill="var(--cat-line)"/><path d="M68 86 L88 84 M112 84 L132 86" stroke="var(--cat-line)" stroke-width="3.5"/></g>
+        <g class="e-closed" fill="none" stroke="var(--cat-line)" stroke-width="3.5"><path d="M70 86 Q78 94 86 86"/><path d="M114 86 Q122 94 130 86"/></g>
+        <g class="e-star"><use href="#${id}star" x="78" y="86"/><use href="#${id}star" x="122" y="86"/></g>
+        <g class="e-heart"><use href="#${id}heart" x="78" y="87"/><use href="#${id}heart" x="122" y="87"/></g>
+        <g class="e-dizzy" fill="none" stroke="var(--cat-line)" stroke-width="2.6">
+          <path d="M78 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
+          <path d="M122 86 m-1 0 a1.5 1.5 0 1 1 3 0 a4 4 0 1 1 -8 0 a6.5 6.5 0 1 1 13 0 a8 8 0 1 1 -16 0"/>
+        </g>
+      </g>
+      ${p.face || ''}
+      ${nose}
+      <circle class="nose-bubble" cx="109" cy="100" r="7" fill="rgba(190,230,255,.65)" stroke="rgba(120,180,230,.9)" stroke-width="1.2"/>
+      <g class="mouths" stroke="var(--cat-line)" stroke-width="2.6" fill="none">
+        <g class="m-smile"><path d="M85 106 Q100 132 115 106 Z" fill="var(--cat-mouth)"/><path d="M92 118 Q100 112 108 118 Q100 125 92 118 Z" fill="var(--cat-pink)" stroke="none"/><path d="M91 103 Q95.5 108 100 103 Q104.5 108 109 103"/></g>
+        <g class="m-grin"><path d="M80 105 Q100 140 120 105 Z" fill="var(--cat-mouth)"/><path d="M89 121 Q100 113 111 121 Q100 131 89 121 Z" fill="var(--cat-pink)" stroke="none"/><path d="M89 103 Q94.5 108 100 103 Q105.5 108 111 103"/></g>
+        <g class="m-w"><path d="M90 104 Q95 110 100 104 Q105 110 110 104"/></g>
+        <g class="m-o"><path d="M91 103 Q95.5 107 100 103 Q104.5 107 109 103"/><ellipse cx="100" cy="114" rx="6" ry="7" fill="var(--cat-mouth)"/></g>
+        <g class="m-yawn"><ellipse cx="100" cy="116" rx="11" ry="14" fill="var(--cat-mouth)"/><ellipse cx="100" cy="124" rx="7" ry="4.5" fill="var(--cat-pink)" stroke="none"/></g>
+        <g class="m-flat"><path d="M90 109 Q95 105 100 109 Q105 113 110 109"/></g>
+      </g>
+      ${p.whiskers ? `<g stroke="var(--cat-line)" stroke-width="2" opacity=".7"><path d="M46 96 L26 92 M46 102 L24 104"/><path d="M154 96 L174 92 M154 102 L176 104"/></g>` : ''}
+    </g>
+    <g class="arm-l"><rect x="66" y="128" width="17" height="42" rx="8.5" fill="${p.armL}" stroke="var(--cat-line)" stroke-width="3"/><path d="M71 165 L71 169 M78 165 L78 169" stroke="${p.toe}" stroke-width="2"/><rect x="63" y="125" width="23" height="19" rx="8" fill="${shirt}" stroke="var(--cat-line)" stroke-width="3"/></g>
+    <g class="arm-r"><rect x="117" y="128" width="17" height="42" rx="8.5" fill="${p.armR}" stroke="var(--cat-line)" stroke-width="3"/><path d="M122 165 L122 169 M129 165 L129 169" stroke="${p.toe}" stroke-width="2"/><rect x="114" y="125" width="23" height="19" rx="8" fill="${shirt}" stroke="var(--cat-line)" stroke-width="3"/></g>
+  </g>
+</svg>`;
+  }
+  function paint(el, p) {
+    el.style.setProperty('--cat-body', p.colors.body);
+    el.style.setProperty('--cat-patch', p.colors.patch);
+    el.style.setProperty('--cat-belly', p.colors.belly);
+    el.style.setProperty('--cat-line', p.colors.line);
+    el.style.setProperty('--cat-pink', p.colors.pink);
+  }
+  return { PETS, svg, paint };
+})();
+</script>
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const floor = document.getElementById('floor');
+  const catEl = document.getElementById('cat');
+  const bubble = document.getElementById('bubble');
+  const moodEl = document.getElementById('mood');
+  const flipEl = catEl.querySelector('.flip');
+  const pickerEl = document.getElementById('picker');
+  const foodsEl = document.getElementById('foods');
+  const bellyEl = document.getElementById('belly');
+  const bellyFill = document.getElementById('bellyFill');
+  let pupils = null;
+  let pet = PetArt.PETS[0];
+
+  // idle thresholds (ms since the last time someone played with the cat)
+  const T_BORED = 12000, T_SLEEPY = 22000, T_SLEEP = 32000;
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  let W = 0, H = 0, size = 200, floorTop = 0, floorBottom = 0;
+  function layout() {
+    W = stage.clientWidth; H = stage.clientHeight;
+    size = Math.round(Math.max(140, Math.min(250, W * 0.4, H * 0.34)) * pet.scale);
+    floorTop = Math.round(H * 0.58);
+    foodsEl.style.bottom = (pickerEl.offsetHeight + 20) + 'px';
+    floorBottom = H - Math.max(18, H * 0.04) - pickerEl.offsetHeight - foodsEl.offsetHeight - 8;
+    floor.style.setProperty('--floor-top-px', floorTop + 'px');
+    floor.style.top = floorTop + 'px';
+    const bd = document.getElementById('backdrop');
+    const bdH = Math.round(floorTop * 0.78);
+    bd.style.height = bdH + 'px';
+    bd.style.top = (floorTop - bdH + 2) + 'px';
+    catEl.style.setProperty('--size', size + 'px');
+    cat.x = Math.min(Math.max(cat.x, size / 2), W - size / 2);
+    cat.y = Math.min(Math.max(cat.y, floorTop + 20), floorBottom);
+  }
+
+  const cat = {
+    x: 0, y: 0, face: 1,
+    target: null, speed: 90, onArrive: null,
+    mode: 'awake',            // awake | action | bored | sleepy | sleep | groggy
+    lastPoke: performance.now(),
+    nextIdle: performance.now() + 1500,
+  };
+
+  // ---------- timers that belong to the current activity ----------
+  let timers = [];
+  const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  // ---------- presentation helpers ----------
+  const MODE_CLASSES = ['walk', 'run', 'slow', 'bored', 'sleepy', 'sleep', 'groggy', 'rub', 'stretch', 'dizzy', 'blushy', 'dragged', 'falling', 'land', 'poof', 'eat', 'full', 'nope', 'kick', 'hug'];
+  const MINI_CLASSES = ['look', 'groom', 'twitch', 'tailflick', 'sigh', 'yawn', 'stir'];
+  const ACTION_CLASSES = ['a-wave', 'a-jump', 'a-excited', 'a-spin', 'a-love', 'a-dance', 'a-flip', 'a-peek', 'a-boo', 'a-giggle', 'a-pounce', 'a-zoom'];
+
+  function face(eyes, mouth) {
+    if (eyes) catEl.dataset.eyes = eyes;
+    if (mouth) catEl.dataset.mouth = mouth;
+  }
+  function setClasses(add = []) {
+    catEl.classList.remove(...MODE_CLASSES.filter(c => c !== 'walk' && c !== 'run' && c !== 'slow'), ...MINI_CLASSES, ...ACTION_CLASSES);
+    add.forEach(c => catEl.classList.add(c));
+  }
+  function restart(cls) {
+    catEl.classList.remove(cls);
+    void catEl.offsetWidth; // let the animation start again
+    catEl.classList.add(cls);
+  }
+
+  let sayTimer = null;
+  function say(text, ms = 1800) {
+    bubble.textContent = text.replaceAll('เหมียว', pet.sound).replaceAll('ปลาทู', pet.dream);
+    bubble.classList.add('show');
+    clearTimeout(sayTimer);
+    sayTimer = setTimeout(() => bubble.classList.remove('show'), ms);
+  }
+  function hush() { clearTimeout(sayTimer); bubble.classList.remove('show'); }
+
+  let moodText = '';
+  function mood(text) {
+    if (text === moodText) return;
+    moodText = text;
+    moodEl.textContent = text;
+    moodEl.classList.remove('pop'); void moodEl.offsetWidth; moodEl.classList.add('pop');
+    setTimeout(() => moodEl.classList.remove('pop'), 220);
+  }
+
+  // ---------- particles ----------
+  function scale() { return 0.78 + 0.34 * Math.max(0, cat.y - floorTop) / Math.max(1, floorBottom - floorTop); }
+  function headPos() { const s = scale(); return { x: cat.x, y: cat.y - size * s * 0.62, s }; }
+
+  function fx(text, opts = {}) {
+    const el = document.createElement('div');
+    el.className = 'fx' + (opts.cls ? ' ' + opts.cls : '');
+    if (text) el.textContent = text;
+    const p = opts.at || headPos();
+    el.style.left = (p.x + (opts.ox || 0)) + 'px';
+    el.style.top = (p.y + (opts.oy || 0)) + 'px';
+    el.style.setProperty('--dx', (opts.dx ?? rand(-60, 60)) + 'px');
+    el.style.setProperty('--dy', (opts.dy ?? rand(-120, -70)) + 'px');
+    el.style.setProperty('--rot', (opts.rot ?? rand(-30, 30)) + 'deg');
+    el.style.setProperty('--dur', (opts.dur || 1.6) + 's');
+    el.style.fontSize = (opts.size || 26) * (p.s || 1) + 'px';
+    if (opts.color) el.style.color = opts.color;
+    if (opts.bg) el.style.background = opts.bg;
+    if (opts.w) { el.style.width = opts.w + 'px'; el.style.height = (opts.h || opts.w) + 'px'; }
+    if (opts.delay) el.style.animationDelay = opts.delay + 's';
+    el.addEventListener('animationend', () => el.remove());
+    stage.appendChild(el);
+  }
+  const burst = (chars, n, colors, o = {}) => {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rand(-.3, .3);
+      const r = rand(70, 130);
+      fx(pick(chars), { dx: Math.cos(a) * r, dy: Math.sin(a) * r - 30, color: pick(colors), size: rand(18, 30), delay: rand(0, .25), ...o });
+    }
+  };
+  const floaty = (chars, n, colors, o = {}) => {
+    for (let i = 0; i < n; i++) fx(pick(chars), { color: pick(colors), size: rand(20, 32), delay: i * 0.15, ox: rand(-40, 40), dur: 2, ...o });
+  };
+  function dust(n = 3) {
+    for (let i = 0; i < n; i++) {
+      fx('', { cls: 'dust', at: { x: cat.x - cat.face * size * 0.25, y: cat.y - 8, s: 1 }, dx: -cat.face * rand(20, 60), dy: rand(-30, -10), dur: .7, delay: i * .06 });
+    }
+  }
+  function confetti(n = 26) {
+    const colors = ['#ff6fa5', '#ffd34d', '#5cc8ff', '#8be38b', '#b28cff', '#ff9a4d'];
+    const p = headPos();
+    for (let i = 0; i < n; i++) {
+      fx('', { cls: 'fall', at: { x: p.x, y: p.y - 30, s: 1 }, bg: pick(colors), w: rand(6, 11), h: rand(10, 16), dx: rand(-200, 200), dy: rand(120, 260), rot: rand(-540, 540), dur: rand(1.6, 2.4), delay: rand(0, .2) });
+    }
+  }
+  const HEARTS = ['♥', '♡', '💗'];
+  const PINKS = ['#ff4f8b', '#ff8fb0', '#ff6fa5'];
+  const STARS = ['★', '✦', '✧', '✨'];
+  const GOLDS = ['#ffc93c', '#ffd966', '#ffb703', '#7fd1ff'];
+  const NOTES = ['♪', '♫', '♬'];
+  const BLUES = ['#3d7fd1', '#6aa8f0', '#b28cff'];
+
+  // ---------- movement ----------
+  function walkTo(x, y, speed = 90, onArrive = null) {
+    const half = size * 0.4;
+    cat.target = { x: Math.min(Math.max(x, half), W - half), y: Math.min(Math.max(y, floorTop + 20), floorBottom) };
+    cat.speed = speed;
+    cat.onArrive = onArrive;
+  }
+  function stopWalking() {
+    cat.target = null; cat.onArrive = null;
+    catEl.classList.remove('walk', 'run', 'slow');
+  }
+  function randomSpot() { return { x: rand(size * 0.5, W - size * 0.5), y: rand(floorTop + 30, floorBottom) }; }
+
+  // ---------- moods ----------
+  function setMode(m) {
+    cat.mode = m;
+    clearTimers();
+    stopWalking();
+    setClasses(m === 'awake' || m === 'action' ? [] : [m]);
+    const now = performance.now();
+    if (m === 'awake') { face('open', 'smile'); mood(hungry() ? '🥺 หิวจัง' : '😸 ร่าเริง'); cat.nextIdle = now + (play.fresh ? 300 : rand(800, 2000)); }
+    if (m === 'bored') { face('flat', 'flat'); mood('😑 เบื่อจัง…'); say(pick(['เฮ้อ… ไม่มีใครเล่นด้วยเลย', 'เบื่อจัง~', 'เฮ้อออ…']), 2200); cat.nextIdle = now + rand(2500, 4000); }
+    if (m === 'sleepy') { face('half', 'w'); mood('🥱 ง่วงนอน…'); yawn(); cat.nextIdle = now + rand(3500, 5000); }
+    if (m === 'sleep') { face('closed', 'w'); mood('😴 หลับปุ๋ย'); hush(); cat.nextIdle = now + 900; }
+  }
+
+  // idle behaviours that happen on their own (they don't count as play)
+  function idleTick(now) {
+    if (now < cat.nextIdle) return;
+    if (cat.mode === 'awake') {
+      cat.nextIdle = now + rand(1800, 4200);
+      if (cat.target) return;
+      if (toy && toy.kind === 'wand' && now > play.restUntil) { startChase(); return; }
+      if (toy && toy.kind === 'phys' && now > play.restUntil && (play.fresh || Math.random() < 0.4)) { startPlay(); return; }
+      if (hungry() && Math.random() < 0.35) {
+        mini('nope', 1200, 'half', 'o');
+        say(pick(['หิวจัง… 🥺', 'ท้องร้องจ๊อกๆ…', 'ขอข้าวหน่อยน้า~', 'มีอะไรกินบ้าง?']), 1800);
+        return;
+      }
+      const r = Math.random();
+      if (r < 0.55) { const p = randomSpot(); walkTo(p.x, p.y, rand(70, 110)); }
+      else if (r < 0.68) mini('look', 1800, 'open', 'smile');
+      else if (r < 0.8) { mini('groom', 2000, 'closed', 'w'); }
+      else if (r < 0.9) mini('tailflick', 1500, 'happy', 'smile');
+      else { mini('twitch', 1000); if (Math.random() < .5) say(pick(['เหมียว~', 'ลั้นลา~', 'มาเล่นกันไหม?', 'เมี้ยว ♪']), 1500); }
+    } else if (cat.mode === 'bored') {
+      cat.nextIdle = now + rand(3500, 5500);
+      if (cat.target) return;
+      const r = Math.random();
+      if (r < 0.45) { restart('sigh'); say(pick(['เฮ้อ…', 'เบื่ออ…', 'ว่างจัง…']), 1500); fx('~', { color: '#9fb4c8', size: 30, oy: size * .25, dx: rand(20, 50), dy: -40 }); }
+      else if (r < 0.75) { const p = randomSpot(); catEl.classList.add('slow'); walkTo(cat.x + rand(-140, 140), p.y, 35, () => catEl.classList.remove('slow')); }
+      else restart('twitch');
+    } else if (cat.mode === 'sleepy') {
+      cat.nextIdle = now + rand(3800, 5500);
+      if (Math.random() < 0.6) yawn(); else say(pick(['ง่วงจัง…', 'หนังตาหนัก…', 'ขอนอนแป๊บ…']), 1700);
+    } else if (cat.mode === 'sleep') {
+      cat.nextIdle = now + 1300;
+      const p = headPos();
+      fx(pick(['z', 'Z', 'z']), { cls: 'zzz', at: { x: p.x + size * p.s * 0.22, y: p.y - 10, s: p.s }, dx: rand(30, 70), dy: rand(-90, -60), size: rand(20, 32), dur: 2.6, rot: rand(-20, 20) });
+      if (Math.random() < 0.1) say(pick(['งืม… ปลาทู…', 'คร่อก… ฟี้…', 'งึมงำ…', 'อีก 5 นาที…']), 1800);
+      if (Math.random() < 0.08) restart('twitch');
+    }
+  }
+
+  function mini(cls, ms, eyes, mouth) {
+    const prev = [catEl.dataset.eyes, catEl.dataset.mouth];
+    restart(cls);
+    if (eyes) face(eyes, mouth);
+    later(() => {
+      catEl.classList.remove(cls);
+      if (eyes && cat.mode === 'awake') face(prev[0], prev[1]);
+    }, ms);
+  }
+
+  function yawn() {
+    const eyes = catEl.dataset.eyes;
+    restart('yawn');
+    face('closed', 'yawn');
+    say(pick(['หาววว~', 'ฮ้าววว…']), 1500);
+    later(() => { catEl.classList.remove('yawn'); if (cat.mode === 'sleepy') face('half', 'w'); else face(eyes, 'w'); }, 1800);
+  }
+
+  // ---------- reactions to play ----------
+  const ACTIONS = {
+    wave: () => {
+      setClasses(['a-wave']); face('happy', 'smile');
+      say(pick(['สวัสดี~ เหมียว!', 'หวัดดีจ้า~ 👋', 'ฮัลโหล~!']));
+      floaty(['✦', '♪'], 3, GOLDS);
+      return 2200;
+    },
+    jump: () => {
+      setClasses(['a-jump']); face('happy', 'grin');
+      say(pick(['ฮึบ!', 'โดดดด~!', 'ย้าฮู้!']), 1200);
+      later(() => burst(STARS, 10, GOLDS), 420);
+      later(() => dust(4), 820);
+      return 1100;
+    },
+    excited: () => {
+      setClasses(['a-excited']); face('star', 'grin');
+      say(pick(['ว้าววว!!', 'ตื่นเต้นจังเลย!!', 'เย้ๆๆ!!']));
+      burst(STARS, 12, GOLDS);
+      later(() => burst(STARS, 8, GOLDS), 900);
+      return 2000;
+    },
+    spin: () => {
+      setClasses(['a-spin']); face('happy', 'grin');
+      say('หมุนติ้ว~', 1000);
+      later(() => { setClasses(['dizzy']); face('dizzy', 'o'); say('@_@ มึนนน…', 1300); floaty(['✧', '★'], 3, GOLDS, { dur: 1.2 }); }, 1000);
+      return 2400;
+    },
+    love: () => {
+      setClasses(['a-love']); face('heart', 'smile');
+      say(pick(['รักนะ ♥', 'ชอบที่สุดเลย~', 'อุ่นใจจัง ♥']));
+      floaty(HEARTS, 6, PINKS);
+      return 2300;
+    },
+    dance: () => {
+      setClasses(['a-dance']); face('happy', 'smile');
+      say(pick(['♪ ลั้นลา ♪', 'เต้นกันเถอะ~', '♫ เหมียว เหมียว ♫']), 2200);
+      floaty(NOTES, 6, BLUES, { dur: 1.8 });
+      return 2600;
+    },
+    flip: () => {
+      setClasses(['a-flip']); face('closed', 'grin');
+      say('ตีลังกา! ✨', 1200);
+      later(() => { face('star', 'grin'); burst(STARS, 10, GOLDS); dust(4); }, 860);
+      return 1500;
+    },
+    peekaboo: () => {
+      setClasses(['a-peek']); face('closed', 'w');
+      say('ซ่อนแล้วน้า…', 1100);
+      later(() => { setClasses(['a-boo']); face('wide', 'grin'); say('จ๊ะเอ๋!', 1200); burst(STARS, 8, GOLDS); }, 1200);
+      return 2300;
+    },
+    giggle: () => {
+      setClasses(['a-giggle']); face('happy', 'grin');
+      say(pick(['คิกๆๆ จั๊กจี้!', 'ฮิฮิ~', 'อย่าจิ้มสิ คิกๆ']));
+      floaty(['♪', '✿', '♡'], 4, PINKS.concat(GOLDS));
+      return 1700;
+    },
+    pounce: () => {
+      setClasses(['a-pounce']); face('wide', 'w');
+      say('ตะครุบ!', 1300);
+      const dir = cat.face;
+      later(() => { walkTo(cat.x + dir * size * 0.6, cat.y, 380); face('happy', 'grin'); }, 650);
+      later(() => dust(4), 1000);
+      return 1300;
+    },
+    zoomies: () => {
+      setClasses(['a-zoom']); face('star', 'grin');
+      say('วิ้งงงง~!', 1400);
+      const startX = cat.x;
+      const farX = cat.x < W / 2 ? W - size * 0.4 : size * 0.4;
+      catEl.classList.add('run');
+      const dusty = setInterval(() => dust(2), 120); timers.push(dusty);
+      walkTo(farX, cat.y, 520, () => {
+        catEl.classList.add('run');
+        walkTo(startX + (farX > startX ? 40 : -40), cat.y, 520, () => clearInterval(dusty));
+      });
+      return Math.max(1600, (Math.abs(farX - startX) * 2) / 520 * 1000 + 400);
+    },
+    smile: () => {
+      setClasses(['blushy']); face('happy', 'grin');
+      say(pick(['เหมียว~ 😸', 'ยิ้มแป้นเลย~', 'อิอิ']));
+      floaty(['✿', '♡'], 3, PINKS);
+      return 1600;
+    },
+  };
+  const ACTION_NAMES = Object.keys(ACTIONS);
+  let lastAction = '';
+
+  function doAction(name) {
+    clearTimers();
+    stopWalking();
+    cat.mode = 'action';
+    mood(pick(['🤩 ตื่นเต้น!', '😆 สนุกจัง!', '😻 ดีใจ!']));
+    const ms = ACTIONS[name]();
+    lastAction = name;
+    catEl.classList.toggle('walk', !!cat.target);
+    later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, ms);
+  }
+
+  function superExcited() {
+    clearTimers(); stopWalking();
+    cat.mode = 'action';
+    mood('🤩 ตื่นเต้นสุดๆ!!');
+    setClasses(['a-excited']); face('star', 'grin');
+    say('ตื่นเต้นสุดๆ ไปเลย!!!', 2200);
+    confetti(30);
+    burst(STARS, 14, GOLDS);
+    later(() => { setClasses(['a-flip']); face('star', 'grin'); }, 1300);
+    later(() => { confetti(20); burst(HEARTS, 8, PINKS); }, 2200);
+    later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 2700);
+  }
+
+  function wakeUpGroggy() {
+    clearTimers(); stopWalking();
+    cat.mode = 'groggy';
+    setClasses(['groggy', 'rub']); face('half', 'w');
+    mood('😵‍💫 งัวเงีย…');
+    say(pick(['งือ… ใครปลุกเค้า…', 'อือ… อะไรเหรอ…', 'งืมม… ยังง่วงอยู่เลย…']), 1700);
+    later(() => face('closed', 'w'), 600);
+    later(() => face('half', 'w'), 900);
+    later(() => face('closed', 'w'), 1300);
+    later(() => { catEl.classList.remove('rub'); catEl.classList.add('stretch'); face('closed', 'yawn'); say('หาววววว~', 1300); }, 1800);
+    later(() => { catEl.classList.remove('stretch', 'groggy'); face('open', 'o'); }, 3100);
+    later(() => { face('happy', 'smile'); say(pick(['ตื่นแล้ว! มาเล่นกัน~', 'สดชื่นแล้ว เหมียว!']), 1500); floaty(['✦'], 3, GOLDS); }, 3500);
+    later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 4600);
+  }
+
+  // ---------- input ----------
+  let clicks = [];
+  function pokeCat() {
+    const now = performance.now();
+    if (cat.mode === 'groggy') { say(pick(['อีกแป๊บน้า…', 'งือ…']), 1000); return; }
+    if (cat.mode === 'eating') { say(pick(['กำลังกินอยู่น้า~', 'งั่มๆ อย่าเพิ่งกวน~']), 1000); return; }
+    const wasSleepy = cat.mode === 'sleep' || cat.mode === 'sleepy';
+    cat.lastPoke = now;
+    if (wasSleepy) { clicks = []; wakeUpGroggy(); return; }
+
+    clicks = clicks.filter(t => now - t < 2500);
+    clicks.push(now);
+    if (clicks.length >= 6) { clicks = []; superExcited(); return; }
+
+    let name;
+    do { name = pick(ACTION_NAMES); } while (name === lastAction);
+    if (cat.mode === 'bored' && Math.random() < .6) name = pick(['excited', 'jump', 'wave']);
+    doAction(name);
+  }
+
+  // ---------- dragging ----------
+  const drag = { id: null, sx: 0, sy: 0, ox: 0, oy: 0, active: false, lastX: 0, lastT: 0, tilt: 0, vx: 0, startY: 0 };
+  let suppressClick = false;
+
+  catEl.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (cat.mode === 'falling' || cat.mode === 'eating') return;
+    drag.id = e.pointerId; drag.active = false;
+    drag.sx = e.clientX; drag.sy = e.clientY;
+    drag.ox = cat.x - e.clientX; drag.oy = cat.y - e.clientY;
+    drag.lastX = e.clientX; drag.lastT = performance.now(); drag.vx = 0;
+    catEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  catEl.addEventListener('pointermove', e => {
+    if (e.pointerId !== drag.id) return;
+    if (!drag.active && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) startDrag();
+    if (!drag.active) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - drag.lastT);
+    drag.vx = drag.vx * 0.6 + ((e.clientX - drag.lastX) / dt) * 0.4;
+    drag.lastX = e.clientX; drag.lastT = now;
+    const half = size * 0.4;
+    cat.x = Math.min(Math.max(e.clientX + drag.ox, half), W - half);
+    cat.y = Math.min(Math.max(e.clientY + drag.oy, size * 0.85), floorBottom);
+    if (Math.abs(drag.vx) > 0.05) cat.face = drag.vx > 0 ? 1 : -1;
+  });
+  const endPointer = e => {
+    if (e.pointerId !== drag.id) return;
+    drag.id = null;
+    if (drag.active) { drag.active = false; suppressClick = true; setTimeout(() => (suppressClick = false), 0); drop(); }
+  };
+  catEl.addEventListener('pointerup', endPointer);
+  catEl.addEventListener('pointercancel', endPointer);
+
+  function startDrag() {
+    play.busy = false; play.restUntil = performance.now() + 6000;
+    const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
+    clearTimers(); stopWalking(); hush();
+    drag.active = true;
+    drag.startY = cat.y;
+    cat.mode = 'drag';
+    cat.lastPoke = performance.now();
+    setClasses(['dragged']);
+    if (wasAsleep) { face('wide', 'o'); mood('😳 ตื่นแล้ว!?'); say(pick(['เอ๊ะ!? ลอยได้!?', 'ฮะ! ใครอุ้มเค้า!']), 1600); }
+    else {
+      const r = Math.random();
+      if (r < 0.5) { face('star', 'grin'); say(pick(['ว้าย~ ลอยได้!', 'บินได้แล้ว~!', 'วี้~!']), 1500); }
+      else { face('wide', 'o'); say(pick(['เอ๋!? ปล่อยน้า~', 'ว้ายยย!', 'หวาาา~']), 1500); }
+      mood('🙀 ลอยอยู่!');
+    }
+  }
+
+  function drop() {
+    cat.lastPoke = performance.now();
+    catEl.style.setProperty('--tilt', '0deg');
+    drag.tilt = 0;
+    const landY = Math.max(cat.y, floorTop + 20 + Math.random() * (floorBottom - floorTop - 20) * 0.5);
+    cat.fall = { vy: 0, landY, fromY: cat.y };
+    cat.mode = 'falling';
+    setClasses(['falling']);
+    face('wide', 'o');
+  }
+
+  function land() {
+    const height = cat.fall.landY - cat.fall.fromY;
+    cat.y = cat.fall.landY;
+    cat.fall = null;
+    cat.mode = 'action';
+    setClasses(['land']);
+    dust(5);
+    if (height > H * 0.35) {
+      face('dizzy', 'o'); say(pick(['โอ๊ย~ มึนเลย @_@', 'ตุ้บ! หัวหมุน~']), 1500);
+      later(() => setClasses(['dizzy']), 550);
+      later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 2000);
+    } else {
+      face('happy', 'grin'); say(pick(['ลงจอดสวย~ ✨', 'ตุ้บ! เล่นอีก!', 'สนุกจัง! อีกๆ']), 1500);
+      burst(STARS, 6, GOLDS);
+      later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 1300);
+    }
+  }
+
+  catEl.addEventListener('click', e => { e.stopPropagation(); if (suppressClick || cat.mode === 'drag' || cat.mode === 'falling') return; pokeCat(); });
+  catEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pokeCat(); } });
+
+  stage.addEventListener('click', e => {
+    const now = performance.now();
+    if (cat.mode === 'sleep') {
+      restart('stir'); say(pick(['งืม…', 'อือ…', '…ฟี้']), 1200);
+      setTimeout(() => catEl.classList.remove('stir'), 900);
+      return;
+    }
+    if (cat.mode === 'groggy' || cat.mode === 'action' || cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating') return;
+    if (toy && toy.kind === 'wand') return;
+    if (cat.mode === 'sleepy') { cat.lastPoke = now; wakeUpGroggy(); return; }
+    cat.lastPoke = now;
+    if (cat.mode === 'bored') setMode('awake');
+    face('happy', 'smile');
+    say(pick(['ไปแล้วๆ~', 'มาแล้วจ้า!', 'เหมียว? ไปจ้า~']), 1300);
+    const y = Math.min(Math.max(e.clientY, floorTop + 20), floorBottom);
+    walkTo(e.clientX, y, 170, () => { face('open', 'smile'); mini('tailflick', 1500); });
+    catEl.classList.add('run');
+    cat.nextIdle = now + 3000;
+  });
+
+  const pointer = { x: -1, y: -1 };
+  window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; });
+
+  // ---------- main loop ----------
+  let lastT = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+
+    const idleFor = now - cat.lastPoke;
+    if (cat.mode === 'awake' && idleFor > T_BORED) setMode('bored');
+    else if (cat.mode === 'bored' && idleFor > T_SLEEPY) setMode('sleepy');
+    else if (cat.mode === 'sleepy' && idleFor > T_SLEEP) setMode('sleep');
+
+    toyTick(dt, now);
+
+    if (cat.mode === 'drag') {
+      const want = Math.max(-28, Math.min(28, -drag.vx * 22)) * cat.face;
+      drag.tilt += (want - drag.tilt) * Math.min(1, dt * 10);
+      drag.vx *= Math.pow(0.02, dt);
+      catEl.style.setProperty('--tilt', drag.tilt.toFixed(1) + 'deg');
+    } else if (cat.mode === 'falling' && cat.fall) {
+      cat.fall.vy += 2600 * dt;
+      cat.y += cat.fall.vy * dt;
+      if (cat.y >= cat.fall.landY) land();
+    }
+
+    if (cat.target) {
+      const dx = cat.target.x - cat.x, dy = cat.target.y - cat.y;
+      const dist = Math.hypot(dx, dy);
+      const stepLen = cat.speed * dt;
+      if (Math.abs(dx) > 2) cat.face = dx > 0 ? 1 : -1;
+      if (dist <= stepLen) {
+        cat.x = cat.target.x; cat.y = cat.target.y;
+        const cb = cat.onArrive;
+        cat.target = null; cat.onArrive = null;
+        catEl.classList.remove('walk', 'run');
+        if (cb) cb();
+      } else {
+        cat.x += dx / dist * stepLen;
+        cat.y += dy / dist * stepLen;
+        catEl.classList.add('walk');
+        if (cat.speed > 150 && !catEl.classList.contains('slow')) catEl.classList.add('run');
+      }
+    }
+
+    if (cat.mode === 'awake' || cat.mode === 'bored' || cat.mode === 'sleepy' || cat.mode === 'sleep') idleTick(now);
+
+    const s = scale();
+    catEl.style.transform = `translate(${cat.x - size / 2}px, ${cat.y - size}px) scale(${s})`;
+    catEl.style.setProperty('--face', cat.face);
+    catEl.style.zIndex = 2;
+
+    // eyes follow the pointer
+    if (pointer.x >= 0 && catEl.dataset.eyes === 'open') {
+      const h = headPos();
+      let vx = (pointer.x - h.x) * cat.face, vy = pointer.y - h.y;
+      const len = Math.hypot(vx, vy) || 1;
+      const k = Math.min(1, len / 200) * 3.2;
+      pupils.setAttribute('transform', `translate(${(vx / len * k).toFixed(2)} ${(vy / len * k).toFixed(2)})`);
+    } else {
+      pupils.removeAttribute('transform');
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- feeding ----------
+  const FOODS = [
+    { key: 'fish', icon: '🐟', name: 'ปลา', value: 35 },
+    { key: 'meat', icon: '🍖', name: 'เนื้อ', value: 40 },
+    { key: 'bone', icon: '🦴', name: 'ขนม', value: 20 },
+    { key: 'milk', icon: '🥛', name: 'นม', value: 25 },
+  ];
+  let fullness = 60;            // 0..100, slowly goes down
+  const hungry = () => fullness < 30;
+  let bowl = null;
+
+  function showBelly() {
+    bellyFill.style.width = Math.round(fullness) + '%';
+    bellyEl.classList.toggle('hungry', hungry());
+    bellyEl.title = 'ความอิ่ม ' + Math.round(fullness) + '%';
+  }
+  setInterval(() => {
+    const wasHungry = hungry();
+    fullness = Math.max(0, fullness - (cat.mode === 'sleep' ? 0.5 : 1));
+    showBelly();
+    if (!wasHungry && hungry() && cat.mode === 'awake') mood('🥺 หิวจัง');
+  }, 3000);
+
+  function removeBowl() {
+    if (!bowl) return;
+    const el = bowl.el;
+    bowl = null;
+    el.classList.add('gone');
+    setTimeout(() => el.remove(), 500);
+  }
+
+  function feed(food) {
+    if (cat.mode === 'drag' || cat.mode === 'falling' || cat.mode === 'eating' || bowl) return;
+    play.busy = false; play.restUntil = performance.now() + 6000;
+    const wasAsleep = cat.mode === 'sleep' || cat.mode === 'sleepy';
+    clearTimers(); stopWalking();
+    cat.lastPoke = performance.now();
+
+    if (fullness >= 95) {
+      cat.mode = 'action';
+      setClasses(['nope']); face('closed', 'w');
+      say(pick(['อิ่มแล้ว กินไม่ไหวแล้ว~', 'พุงจะแตกแล้วน้า~', 'ไว้ทีหลังนะ อิ่มมาก']), 1800);
+      later(() => setMode('awake'), 1400);
+      return;
+    }
+
+    // put a bowl somewhere on the floor, not right on top of the pet
+    let bx = rand(size * 0.7, W - size * 0.7);
+    if (Math.abs(bx - cat.x) < size * 0.6) bx = cat.x < W / 2 ? Math.min(W - size * 0.7, cat.x + size) : Math.max(size * 0.7, cat.x - size);
+    const by = Math.min(floorBottom - 4, Math.max(floorTop + 40, cat.y + rand(-30, 30)));
+    const el = document.createElement('div');
+    el.className = 'bowl';
+    el.style.setProperty('--pos', `translate(${bx - 38}px, ${by - 56}px)`);
+    el.style.transform = `translate(${bx - 38}px, ${by - 56}px)`;
+    el.innerHTML = `<div class="food">${food.icon}</div><svg viewBox="0 0 76 34"><ellipse cx="38" cy="8" rx="34" ry="7" fill="#ffb3c8" stroke="#6b3a4a" stroke-width="2.5"/><path d="M4 8 Q8 32 38 32 Q68 32 72 8" fill="#ff7aa2" stroke="#6b3a4a" stroke-width="2.5"/><path d="M14 20 Q38 26 62 20" fill="none" stroke="#fff" stroke-width="2.5" opacity=".7"/></svg>`;
+    stage.appendChild(el);
+    bowl = { el, x: bx, y: by, food };
+
+    cat.mode = 'eating';
+    setClasses([]);
+    const fav = (pet.fav || ['meat', 'bone']).includes(food.key);
+    if (wasAsleep) { face('wide', 'o'); say('ฟุดฟิด… กลิ่นอะไรหอมๆ!', 1300); }
+    else { face('star', 'grin'); say(fav ? pick([`${food.name}!! ของโปรดเลย!`, `ว้าว ${food.name}! 😋`]) : pick(['ข้าวมาแล้ว!', 'หม่ำๆ!', 'น่ากินจัง~']), 1300); }
+    mood('😋 หิวแล้ว!');
+    later(() => {
+      if (!bowl) return;
+      face('happy', 'grin');
+      const side = bowl.x >= cat.x ? -1 : 1;
+      walkTo(bowl.x + side * size * 0.5, bowl.y - 10, 230, () => eat(fav));
+      catEl.classList.add('run');
+    }, wasAsleep ? 900 : 350);
+  }
+
+  function eat(fav) {
+    if (!bowl) return;
+    cat.face = bowl.x >= cat.x ? 1 : -1;
+    setClasses(['eat']);
+    face('closed', 'o');
+    mood('😋 งั่มๆ');
+    const foodEl = bowl.el.querySelector('.food');
+    const bites = 4;
+    for (let i = 0; i < bites; i++) {
+      later(() => {
+        if (!bowl) return;
+        face(i % 2 ? 'closed' : 'happy', i % 2 ? 'o' : 'w');
+        say(pick(['งั่มๆ', 'หม่ำๆ', 'อร่อยย~', 'จั๊บๆ']), 600);
+        foodEl.style.transform = `translateX(-50%) scale(${1 - (i + 1) / bites * 0.85})`;
+        for (let k = 0; k < 3; k++) fx('•', { at: { x: bowl.x, y: bowl.y - 30, s: 1 }, dx: rand(-40, 40), dy: rand(-40, -10), size: rand(10, 16), color: '#c98a45', dur: .7 });
+      }, 300 + i * 650);
+    }
+    later(() => {
+      if (!bowl) return;
+      foodEl.style.opacity = '0';
+      fullness = Math.min(100, fullness + bowl.food.value + (fav ? 10 : 0));
+      showBelly();
+      setClasses(['full']);
+      face(fav ? 'heart' : 'happy', 'smile');
+      say(fav ? pick(['ของโปรด! อร่อยที่สุดเลย ♥', 'อิ่มแปล้ ขอบคุณน้า ♥']) : pick(['อิ่มแล้ว~ อร่อยจัง!', 'เอิ้ก~ อิ่มจัง', 'ขอบคุณที่เลี้ยงข้าวน้า~']), 2000);
+      floaty(HEARTS, fav ? 7 : 4, PINKS);
+      mood('😊 อิ่มแปล้');
+    }, 300 + bites * 650);
+    later(() => removeBowl(), 300 + bites * 650 + 1200);
+    later(() => { setMode('awake'); cat.lastPoke = performance.now(); }, 300 + bites * 650 + 2200);
+  }
+
+  FOODS.forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'food-btn'; b.textContent = f.icon;
+    b.title = 'ให้' + f.name; b.setAttribute('aria-label', 'ให้' + f.name);
+    b.addEventListener('click', e => { e.stopPropagation(); feed(f); });
+    foodsEl.appendChild(b);
+  });
+  foodsEl.addEventListener('click', e => e.stopPropagation());
+  foodsEl.addEventListener('pointerdown', e => e.stopPropagation());
+  showBelly();
+
+  // ---------- toys ----------
+  const TOYS = {
+    ball: { icon: '<svg viewBox="0 0 40 40" width="1em" height="1em" style="vertical-align:-.12em"><circle cx="20" cy="20" r="17" fill="#d7f046" stroke="#6a7a12" stroke-width="2"/><path d="M6 12 Q20 20 6 30 M34 10 Q20 20 34 30" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>', name: 'ลูกบอล', kind: 'phys', bounce: .62, friction: .35 },
+    yarn: { icon: '🧶', name: 'ไหมพรม', kind: 'phys', bounce: .3, friction: .55 },
+    duck: { icon: '🦆', name: 'เป็ดบีบ', kind: 'phys', bounce: .45, friction: .25 },
+    feather: { icon: '🪶', name: 'ไม้ขนนก', kind: 'wand' },
+  };
+  let toy = null;
+  const play = { busy: false, count: 0, max: 5, cool: 0, start: 0, restUntil: 0 };
+  const toyButtons = {};
+
+  function removeToy() {
+    if (!toy) return;
+    const t = toy;
+    toy = null;
+    [t.el, t.shadow].forEach(el => { if (!el) return; el.classList.add('gone'); setTimeout(() => el.remove(), 400); });
+    stage.classList.remove('wand');
+    Object.values(toyButtons).forEach(b => b.setAttribute('aria-pressed', 'false'));
+    if (cat.mode === 'play' || cat.mode === 'chase') setMode('awake');
+  }
+
+  function placeToy(type) {
+    const def = TOYS[type];
+    const same = toy && toy.type === type;
+    removeToy();
+    if (same) return;                      // tapping the active toy again puts it away
+    toyButtons[type].setAttribute('aria-pressed', 'true');
+    play.restUntil = 0; play.fresh = true;
+    if (def.kind === 'wand') {
+      const el = document.createElement('div');
+      el.className = 'feather';
+      el.innerHTML = `<span>${def.icon}</span>`;
+      stage.appendChild(el);
+      stage.classList.add('wand');
+      toy = { type, kind: 'wand', el, x: W / 2, y: floorTop - 30 };
+      startChase();
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'toy';
+    el.innerHTML = `<span>${def.icon}</span>`;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', def.name);
+    const shadow = document.createElement('div');
+    shadow.className = 'toy-shadow';
+    stage.append(shadow, el);
+    const fromLeft = cat.x > W / 2;
+    toy = {
+      type, kind: 'phys', def, el, shadow,
+      x: fromLeft ? 40 : W - 40, y: rand(floorTop + 40, floorBottom - 10), z: 160,
+      vx: (fromLeft ? 1 : -1) * rand(260, 380), vy: rand(-40, 40), vz: 120, rot: 0, held: false,
+    };
+    bindToy(toy);
+    startPlay();
+  }
+
+  function bindToy(t) {
+    const hold = { id: null, moved: false, lx: 0, ly: 0, lt: 0, vx: 0, vy: 0, sx: 0, sy: 0 };
+    t.el.addEventListener('click', e => e.stopPropagation());
+    t.el.addEventListener('pointerdown', e => {
+      e.stopPropagation(); e.preventDefault();
+      hold.id = e.pointerId; hold.moved = false;
+      hold.sx = hold.lx = e.clientX; hold.sy = hold.ly = e.clientY; hold.lt = performance.now(); hold.vx = hold.vy = 0;
+      t.el.setPointerCapture(e.pointerId);
+      t.held = true;
+    });
+    t.el.addEventListener('pointermove', e => {
+      if (e.pointerId !== hold.id) return;
+      const now = performance.now(), dt = Math.max(8, now - hold.lt);
+      hold.vx = hold.vx * .5 + (e.clientX - hold.lx) / dt * 1000 * .5;
+      hold.vy = hold.vy * .5 + (e.clientY - hold.ly) / dt * 1000 * .5;
+      hold.lx = e.clientX; hold.ly = e.clientY; hold.lt = now;
+      if (Math.hypot(e.clientX - hold.sx, e.clientY - hold.sy) > 6) hold.moved = true;
+      const groundTop = floorTop + 20;
+      t.x = Math.min(Math.max(e.clientX, 20), W - 20);
+      t.y = Math.min(Math.max(e.clientY + 20, groundTop), floorBottom);
+      t.z = Math.max(0, groundTop - (e.clientY + 20));
+      t.vx = t.vy = t.vz = 0;
+    });
+    const release = e => {
+      if (e.pointerId !== hold.id) return;
+      hold.id = null;
+      t.held = false;
+      if (hold.moved) {
+        t.vx = Math.max(-900, Math.min(900, hold.vx));
+        t.vy = Math.max(-300, Math.min(300, hold.vy * 0.4));
+        t.vz = Math.max(60, Math.min(600, -hold.vy * 0.6));
+      } else {
+        // a plain tap gives the toy a little flick
+        t.vx = rand(-1, 1) * 260; t.vy = rand(-60, 60); t.vz = 340;
+        if (t.type === 'duck') squeak(t);
+      }
+      cat.lastPoke = performance.now();
+      play.restUntil = 0;
+      if (cat.mode === 'awake' || cat.mode === 'bored' || cat.mode === 'play') startPlay();
+      else if (cat.mode === 'sleep' || cat.mode === 'sleepy') wakeUpGroggy();
+    };
+    t.el.addEventListener('pointerup', release);
+    t.el.addEventListener('pointercancel', release);
+  }
+
+  function squeak(t) {
+    t.el.classList.add('squeak');
+    setTimeout(() => t.el.classList.remove('squeak'), 160);
+    fx('ปี๊บ!', { at: { x: t.x, y: t.y - t.z - 40, s: 1 }, dx: rand(-20, 20), dy: -50, size: 18, color: '#ff8a00', dur: 1 });
+  }
+
+  function startPlay() {
+    if (!toy || toy.kind !== 'phys') return;
+    if (['drag', 'falling', 'eating', 'groggy', 'action'].includes(cat.mode)) return;
+    if (cat.mode === 'sleep' || cat.mode === 'sleepy') { wakeUpGroggy(); return; }
+    clearTimers(); stopWalking();
+    play.fresh = false;
+    cat.mode = 'play';
+    setClasses([]);
+    play.busy = false; play.count = 0; play.max = Math.round(rand(4, 7)); play.start = performance.now();
+    face('star', 'grin');
+    mood('🤩 เล่นสนุก!');
+    say(pick({ ball: ['ลูกบอล!', 'เล่นบอลกัน!'], yarn: ['ไหมพรม! ขอเล่นๆ', 'กลมๆ ม้วนๆ~'], duck: ['เป็ดน้อย! ปี๊บๆ', 'ของเล่นใหม่!'] }[toy.type]), 1400);
+  }
+
+  function startChase() {
+    if (!toy || toy.kind !== 'wand') return;
+    if (['drag', 'falling', 'eating', 'groggy', 'action'].includes(cat.mode)) return;
+    if (cat.mode === 'sleep' || cat.mode === 'sleepy') { wakeUpGroggy(); return; }
+    clearTimers(); stopWalking();
+    cat.mode = 'chase';
+    setClasses([]);
+    play.busy = false; play.cool = 0; play.start = performance.now();
+    face('wide', 'w');
+    mood('🤩 ไล่จับ!');
+    say(pick(['ขนนก! จะจับให้ได้!', 'อะไรขยับๆ น่ะ!?', 'มาเล่นกัน!']), 1400);
+  }
+
+  function endPlay(text) {
+    play.restUntil = performance.now() + 9000;
+    setMode('awake');
+    face('happy', 'smile');
+    say(text || pick(['สนุกจัง! พักก่อนน้า~', 'เหนื่อยแล้ว แต่สนุกมาก!', 'แฮ่กๆ เล่นอีกทีหลังนะ']), 1800);
+    floaty(['✦', '♡'], 3, GOLDS.concat(PINKS));
+  }
+
+  function batToy() {
+    if (!toy || toy.kind !== 'phys' || cat.mode !== 'play' || play.busy || toy.held || toy.z > 30) return;
+    const t = toy;
+    play.busy = true;
+    play.count++;
+    cat.face = t.x >= cat.x ? 1 : -1;
+    cat.lastPoke = performance.now();
+    fullness = Math.max(0, fullness - 1.5); showBelly();
+    const dir = cat.face;
+    let hitAt = 150, done = 600;
+    if (t.type === 'ball') {
+      setClasses(['kick']); face('happy', 'grin');
+      if (Math.random() < .6) say(pick(['เตะ!', 'ซู้ดด!', 'โกล~!', 'รับนะ!']), 800);
+      later(() => { t.vx = dir * rand(320, 520); t.vy = rand(-120, 120); t.vz = rand(240, 420); }, hitAt);
+    } else if (t.type === 'yarn') {
+      if (play.count % 2) {
+        setClasses(['a-pounce']); face('wide', 'w'); say(pick(['ตะครุบ!', 'จับได้แล้ว!']), 900);
+        hitAt = 760; done = 1250;
+      } else {
+        setClasses(['kick']); face('happy', 'w'); if (Math.random() < .5) say(pick(['ม้วนๆ~', 'ขยุ้มๆ', 'กลิ้งไป~']), 800);
+      }
+      later(() => { t.vx = dir * rand(160, 280); t.vy = rand(-80, 80); t.vz = rand(40, 120); }, hitAt);
+    } else {
+      setClasses(['hug']); face('heart', 'smile'); say(pick(['ปี๊บๆ! ชอบจัง', 'กอดเป็ดน้อย~', 'บีบๆ ปี๊บ!']), 1000);
+      later(() => squeak(t), 200); later(() => squeak(t), 520);
+      hitAt = 850; done = 1200;
+      later(() => { t.vx = dir * rand(120, 220); t.vy = rand(-60, 60); t.vz = rand(300, 420); }, hitAt);
+    }
+    later(() => {
+      play.busy = false;
+      setClasses([]);
+      face('star', 'grin');
+      if (play.count >= play.max) endPlay();
+    }, done);
+  }
+
+  function toyTick(dt, now) {
+    if (!toy) return;
+    if (toy.kind === 'phys') {
+      const t = toy, d = t.def;
+      if (!t.held) {
+        t.vz -= 1500 * dt;
+        t.z += t.vz * dt;
+        if (t.z <= 0) {
+          t.z = 0;
+          if (t.vz < -120) { t.vz = -t.vz * d.bounce; if (t.type === 'duck' && Math.random() < .3) squeak(t); } else t.vz = 0;
+        }
+        t.x += t.vx * dt; t.y += t.vy * dt;
+        if (t.z === 0) { const k = Math.pow(d.friction, dt); t.vx *= k; t.vy *= k; }
+        if (t.x < 20) { t.x = 20; t.vx = Math.abs(t.vx) * .7; }
+        if (t.x > W - 20) { t.x = W - 20; t.vx = -Math.abs(t.vx) * .7; }
+        if (t.y < floorTop + 20) { t.y = floorTop + 20; t.vy = Math.abs(t.vy) * .6; }
+        if (t.y > floorBottom) { t.y = floorBottom; t.vy = -Math.abs(t.vy) * .6; }
+        if (t.type !== 'duck') t.rot += t.vx * dt * 3;
+      }
+      t.el.style.transform = `translate(${t.x - 20}px, ${t.y - t.z - 38}px) rotate(${t.rot.toFixed(1)}deg)`;
+      const sh = Math.max(.35, 1 - t.z / 260);
+      t.shadow.style.transform = `translate(${t.x - 17}px, ${t.y - 6}px) scale(${sh})`;
+
+      if (cat.mode === 'play' && !play.busy) {
+        if (now - play.start > 30000) { endPlay(); return; }
+        const side = t.x >= cat.x ? -1 : 1;
+        const half = size * 0.4;
+        const tx = Math.min(Math.max(t.x + side * size * 0.3, half), W - half);
+        cat.target = { x: tx, y: Math.min(Math.max(t.y - 4, floorTop + 20), floorBottom) };
+        cat.speed = t.type === 'ball' ? 280 : 220;
+        cat.onArrive = batToy;
+      }
+    } else {
+      // the feather follows the pointer, or hovers in the middle until the pointer moves
+      const tx = pointer.x >= 0 ? pointer.x : W / 2 + Math.sin(now / 700) * 120;
+      const ty = pointer.y >= 0 ? pointer.y : floorTop - 30 + Math.cos(now / 500) * 30;
+      toy.x = tx; toy.y = ty;
+      toy.el.style.transform = `translate(${tx - 8}px, ${ty - 38}px)`;
+      if (cat.mode === 'chase' && !play.busy) {
+        if (now - play.start > 30000) { removeToyAfterChase(); return; }
+        const s = scale();
+        const half = size * 0.4;
+        const gy = Math.min(Math.max(ty + size * s * 0.5, floorTop + 20), floorBottom);
+        const near = Math.abs(cat.x - tx) < size * s * 0.45;
+        const headY = cat.y - size * s * 0.7;
+        if (near && ty > headY - size * s * 0.9 && ty < cat.y && now > play.cool) {
+          play.busy = true; play.cool = now + 1300;
+          stopWalking();
+          cat.face = tx >= cat.x ? 1 : -1;
+          cat.lastPoke = now;
+          fullness = Math.max(0, fullness - 1); showBelly();
+          const high = ty < headY - size * s * 0.2;
+          setClasses([high ? 'a-jump' : 'kick']);
+          face('happy', 'grin');
+          say(pick(['ตะครุบ!', 'เกือบได้!', 'ได้แล้ว!', 'ฮึบ!']), 800);
+          later(() => { play.busy = false; setClasses([]); face('wide', 'w'); }, high ? 1050 : 550);
+        } else {
+          cat.target = { x: Math.min(Math.max(tx, half), W - half), y: gy };
+          cat.speed = 240;
+          cat.onArrive = null;
+        }
+      }
+    }
+  }
+  function removeToyAfterChase() {
+    play.restUntil = performance.now() + 9000;
+    endPlay(pick(['เหนื่อยแล้ว ขอพักแป๊บ~', 'แฮ่กๆ จับไม่ได้สักที!']));
+  }
+
+  const sep = document.createElement('span'); sep.className = 'bar-sep';
+  const toyLabel = document.createElement('span'); toyLabel.className = 'foods-label'; toyLabel.textContent = 'ของเล่น';
+  foodsEl.append(sep, toyLabel);
+  Object.entries(TOYS).forEach(([type, def]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'food-btn'; b.innerHTML = def.icon;
+    b.title = def.name; b.setAttribute('aria-label', def.name); b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', e => { e.stopPropagation(); placeToy(type); });
+    toyButtons[type] = b;
+    foodsEl.appendChild(b);
+  });
+
+  // ---------- choosing a pet ----------
+  function mountPet(p) {
+    pet = p;
+    PetArt.paint(catEl, p);
+    flipEl.innerHTML = PetArt.svg(p);
+    pupils = flipEl.querySelector('.pupils');
+    catEl.setAttribute('aria-label', p.label + ' แตะเพื่อเล่นด้วย');
+    pickerEl.querySelectorAll('.pet-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.key === p.key)));
+    try { localStorage.setItem('pet', p.key); } catch (e) {}
+  }
+  function switchPet(p) {
+    if (p === pet || cat.mode === 'drag' || cat.mode === 'falling') return;
+    clearTimers(); stopWalking(); hush(); removeBowl(); play.busy = false;
+    cat.mode = 'action';
+    setClasses(['poof']);
+    burst(['✦', '✧', '☁'], 10, GOLDS.concat(['#ffffff']));
+    later(() => { mountPet(p); layout(); }, 240);
+    later(() => { cat.lastPoke = performance.now(); doAction('wave'); say(pick([`สวัสดี! เราคือ${p.name}~`, `${p.name}มาแล้วจ้า!`, `หวัดดี~ ${p.sound}!`]), 2000); }, 520);
+  }
+  PetArt.PETS.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pet-btn'; b.dataset.key = p.key;
+    b.setAttribute('aria-label', p.label);
+    const t = document.createElement('div');
+    t.className = 'thumb'; t.dataset.eyes = 'happy'; t.dataset.mouth = 'smile';
+    PetArt.paint(t, p);
+    t.innerHTML = PetArt.svg(p);
+    const n = document.createElement('span'); n.textContent = p.name;
+    b.append(t, n);
+    b.addEventListener('click', e => { e.stopPropagation(); switchPet(p); });
+    pickerEl.appendChild(b);
+  });
+  pickerEl.addEventListener('click', e => e.stopPropagation());
+  pickerEl.addEventListener('pointerdown', e => e.stopPropagation());
+  let saved = null;
+  try { saved = localStorage.getItem('pet'); } catch (e) {}
+  mountPet(PetArt.PETS.find(p => p.key === saved) || PetArt.PETS[0]);
+
+  // falling sprinkles in the sky
+  const SPRINKLE_COLORS = ['#ff6fa5', '#ffd34d', '#5cc8ff', '#8be38b', '#b28cff', '#ffffff'];
+  for (let i = 0; i < 14; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'sprinkle';
+    sp.style.left = rand(0, 100) + '%';
+    sp.style.background = pick(SPRINKLE_COLORS);
+    sp.style.animationDuration = rand(9, 18) + 's';
+    sp.style.animationDelay = -rand(0, 18) + 's';
+    sp.style.setProperty('--sx', rand(-80, 80) + 'px');
+    sp.style.setProperty('--sy', rand(45, 60) + 'vh');
+    stage.insertBefore(sp, floor);
+  }
+
+  window.addEventListener('resize', layout);
+  layout();
+  cat.x = W / 2; cat.y = floorTop + (floorBottom - floorTop) * 0.55;
+  layout();
+  setMode('awake');
+  setTimeout(() => { doAction('wave'); cat.lastPoke = performance.now(); }, 600);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
